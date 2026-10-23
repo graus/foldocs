@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+{# The heading font, fetched with the stylesheet rather than after it; asset() gives the same URL
+   as style.css's url(), version and all. Not when the design Doc sets another heading font. #}
+{% block head_extra %}{% if "heading font" not in design %}<link rel="preload" href="{{ asset('fonts/bricolage-grotesque.woff2') }}" as="font" type="font/woff2" crossorigin>{% endif %}{% endblock %}
+{% block notice %}
+{% if notice or original_url %}
+<aside class="notice">{{ notice }}
+  {%- if "concept" in theme.extras %} <a href="{{ theme.extras.concept.url }}">{{ t.how_it_works }}</a>{% endif %}
+  {%- if "demo" in theme.extras %} <a href="{{ theme.extras.demo.url }}">{{ t.see_drive_folder }}</a>{% endif %}
+  {%- if original_url %} <a href="{{ original_url }}/">{{ t.back_to_original }}</a>{% endif %}</aside>
+{% endif %}
+{% endblock %}
+{% block header %}
+<header class="site-header wrap">
+  <a class="brand" href="/">
+    {%- if logo -%}
+    <picture>{% if logo_dark %}<source media="(prefers-color-scheme: dark)" srcset="{{ asset(logo_dark) }}">{% endif %}<img src="{{ asset(logo) }}" alt="{{ site.author }}"{% if logo_size %} width="{{ logo_size[0] }}" height="{{ logo_size[1] }}"{% endif %}></picture>
+    {%- else %}{{ m.name(site.author) }}{% endif -%}
+  </a>
+  {# The sections, then the pages (the documents next to the folders), set apart by a rule. A
+     section with subfolders has a button beside its name that opens them: a <details>, so it
+     works by click, keyboard and touch without a script; the script below only closes it. #}
+  <nav class="site-nav" aria-label="{{ t.main_menu }}">
+    {% for item in nav %}
+    {% if item.kind == "page" and loop.previtem and loop.previtem.kind == "section" %}<span class="site-nav-rule" aria-hidden="true"></span>{% endif %}
+    {% set link %}<a href="{{ item.url }}"{% if item.kind == "page" %} class="site-nav-page"{% endif %}{% if item.url == url %} aria-current="page"{% elif item.url == active %} aria-current="true"{% endif %}>{{ item.label|ucfirst }}</a>{% endset %}
+    {% if item.children %}
+    <div class="site-nav-group">
+      {{ link }}
+      <details class="site-nav-more" name="site-nav">
+        <summary><span class="visually-hidden">{{ t.more_in }} {{ item.label }}</span></summary>
+        <ul>
+          {% for child in item.children %}<li><a href="{{ child.url }}"{% if child.url == url %} aria-current="page"{% elif url.startswith(child.url) %} aria-current="true"{% endif %}>{{ child.label|ucfirst }}</a></li>{% endfor %}
+        </ul>
+      </details>
+    </div>
+    {% else %}{{ link }}{% endif %}
+    {% endfor %}
+  </nav>
+  <script>
+    // Close an open submenu on Escape (back to its button) or on a click anywhere else.
+    addEventListener("keydown", e => { if (e.key !== "Escape") return; for (const d of document.querySelectorAll(".site-nav-more[open]")) { d.open = false; d.querySelector("summary").focus(); } });
+    addEventListener("click", e => { for (const d of document.querySelectorAll(".site-nav-more[open]")) if (!d.contains(e.target)) d.open = false; });
+  </script>
+</header>
+{% if crumbs %}
+<nav class="crumbtrail wrap" aria-label="{{ t.breadcrumbs }}">
+  <ol>
+    {% for label, href in crumbs %}
+    <li>{% if loop.last %}<span aria-current="page">{{ label }}</span>{% elif href %}<a href="{{ href }}">{{ label }}</a>{% else %}<span>{{ label }}</span>{% endif %}</li>
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}
+{% endblock %}
+{% block footer %}
+<footer class="site-footer wrap">
+  {% if contact.email %}
+  <section class="cta" aria-labelledby="cta-title">
+    <h2 id="cta-title">{{ t.cta_title }}</h2>
+    <a class="btn" href="mailto:{{ contact.email }}">{{ contact.email }}</a>
+  </section>
+  {% endif %}
+  <div class="footer-line meta">
+    <span>© {{ now.year }} {{ site.author }}</span>
+    <nav aria-label="{{ t.footer_menu }}">
+      {% for name, href in contact.profiles %}<a class="profile" href="{{ href }}" rel="me" title="{{ name }}">{% include "icons/" ~ name|lower|replace(" ", "") ~ ".svg" ignore missing %}<span class="visually-hidden">{{ name }}</span></a>{% endfor %}
+      <a href="/feed.xml">{{ t.feed }}</a>
+    </nav>
+  </div>
+</footer>
+{% endblock %}

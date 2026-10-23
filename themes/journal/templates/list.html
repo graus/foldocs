@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block main %}
+<header class="page-head">
+  <p class="meta">{% for c in category.trail[:-1] %}<a href="{{ c.url }}">{{ c.name }}</a> › {% endfor %}</p>
+  <h1>{{ category.name|ucfirst }}</h1>
+  {% if category.description %}<p class="intro">{{ category.description }}</p>{% endif %}
+  {% if category.intro and page == 1 %}<div class="prose">{{ category.intro|safe }}</div>{% endif %}
+  {% if category.children %}<p class="subfolders">{% for child in category.children %}<a href="{{ child.url }}">{{ child.name }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+</header>
+<section class="stream">
+  {% for item in items %}{{ m.entry(item) }}{% else %}<p>{{ t.nothing_yet }}</p>{% endfor %}
+</section>
+{% if page_count > 1 %}
+<nav class="pages" aria-label="{{ t.pages }}">
+  {% if newer_url %}<a href="{{ newer_url }}">← {{ t.newer }}</a>{% endif %}
+  <span>{{ t.page }} {{ page }} {{ t.of }} {{ page_count }}</span>
+  {% if older_url %}<a href="{{ older_url }}">{{ t.older }} →</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

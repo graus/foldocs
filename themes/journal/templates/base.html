@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+{% block header %}
+<header class="masthead">
+  {# The name is the page's heading on the home page only; elsewhere the page has its own. #}
+  {% if url == "/" %}<h1 class="site-title"><a href="/">{{ site.author }}</a></h1>{% else %}<p class="site-title"><a href="/">{{ site.author }}</a></p>{% endif %}
+  <nav aria-label="{{ t.main_menu }}">
+    {% for item in nav %}{% if item.kind == "page" and loop.previtem and loop.previtem.kind == "section" %}<span class="rule" aria-hidden="true">·</span>{% endif %}<a href="{{ item.url }}"{% if item.kind == "page" %} class="page"{% endif %}{% if item.url == url %} aria-current="page"{% elif item.url == active %} aria-current="true"{% endif %}>{{ item.label|ucfirst }}</a>{% endfor %}
+  </nav>
+</header>
+{% endblock %}
+{% block footer %}
+<footer class="colophon">
+  <p>© {{ now.year }} {{ site.author }}{% if contact.email %} · <a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% endif %}{% for name, href in contact.profiles %} · <a class="profile" href="{{ href }}" rel="me" title="{{ name }}">{% include "icons/" ~ name|lower|replace(" ", "") ~ ".svg" ignore missing %}<span class="visually-hidden">{{ name }}</span></a>{% endfor %} · <a href="/feed.xml">{{ t.feed }}</a></p>
+</footer>
+{% endblock %}

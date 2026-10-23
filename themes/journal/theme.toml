@@ -1,0 +1,11 @@
+# journal: a traditional blog. One column, newest first across every folder, each folder a tag.
+# It extends base (the words, the document); this file adds what is its own.
+
+extends = "base"
+stylesheets = ["style.css"]
+
+[strings]
+description = "Writing and photos."
+latest = "Latest"
+archive = "Archive"
+feed = "Feed"

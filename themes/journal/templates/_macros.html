@@ -1,0 +1,17 @@
+{# Where an item lives: its folders, each a link to that folder's page. #}
+{% macro tags(item) -%}
+{% for name, url in item.folders %}{% if url %}<a href="{{ url }}">{{ name }}</a>{% else %}{{ name }}{% endif %}{% if not loop.last %} › {% endif %}{% endfor %}
+{%- endmacro %}
+
+{# One entry in a list of posts: date and folders, title, excerpt. #}
+{% macro entry(item) %}
+<article class="entry">
+  <p class="meta">
+    {% if item.category.section.ordered %}{{ t.number }} {{ item.number }}{% else %}<time datetime="{{ item.date|iso }}">{{ item.date|date }}</time>{% endif %}
+    · {{ tags(item) }}
+  </p>
+  <h2 class="entry-title"><a href="{{ item.url }}">{{ item.heading }}</a></h2>
+  {% if item.kind == "photo" %}<a href="{{ item.url }}" tabindex="-1" aria-hidden="true">{{ picture(item.image, "(min-width: 42rem) 40rem, calc(100vw - 2rem)", alt="") }}</a>{% endif %}
+  {% if item.excerpt %}<p class="entry-excerpt">{{ item.excerpt }}</p>{% endif %}
+</article>
+{% endmacro %}

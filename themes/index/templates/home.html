@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block main %}
+<section class="readme">
+  <h1>{{ site.author }}</h1>
+  {% if hero.label %}<p class="muted">{{ hero.label }}</p>{% endif %}
+  {% if hero.intro %}<p>{{ hero.intro }}</p>{% endif %}
+</section>
+
+{# The whole site as the tree it is in Drive. #}
+<ul class="tree">
+  {% for section in sections %}{{ m.tree(section) }}{% endfor %}
+</ul>
+{% endblock %}

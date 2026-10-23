@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{% for url, lastmod in urls.items() %}
+  <url><loc>{{ site.url }}{{ url }}</loc>{% if lastmod %}<lastmod>{{ lastmod|iso }}</lastmod>{% endif %}</url>
+{% endfor %}
+</urlset>

@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+{% block header %}
+<header class="bar">
+  {# The path of this page, as in a file manager. #}
+  <nav class="path" aria-label="{{ t.path }}">
+    <a href="/">{{ site.author|lower|replace(" ", "") }}</a>{% if crumbs %}{% for label, href in crumbs[1:] %} / {% if href and not loop.last %}<a href="{{ href }}">{{ label }}</a>{% else %}<span aria-current="page">{{ label }}</span>{% endif %}{% endfor %}{% endif %}
+  </nav>
+  <nav class="links" aria-label="{{ t.pages }}">
+    {% for page in nav if page.kind == "page" %}<a href="{{ page.url }}"{% if page.url == active %} aria-current="page"{% endif %}>{{ page.label }}</a>{% endfor %}
+    {% if contact.email %}<a href="mailto:{{ contact.email }}">{{ contact.email }}</a>{% endif %}
+    {% for name, href in contact.profiles %}<a class="profile" href="{{ href }}" rel="me" title="{{ name }}">{% include "icons/" ~ name|lower|replace(" ", "") ~ ".svg" ignore missing %}<span class="visually-hidden">{{ name }}</span></a>{% endfor %}
+    <a href="/feed.xml">{{ t.feed }}</a>
+  </nav>
+</header>
+{% endblock %}

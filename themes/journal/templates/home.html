@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block main %}
+{% if portrait %}<figure class="portrait">{{ picture(portrait, "8rem", alt=t.portrait_of ~ " " ~ site.author, lazy=false) }}</figure>{% endif %}
+{% if hero.intro %}<p class="intro">{{ hero.intro }}</p>{% endif %}
+
+{# The latest writing and photos from every folder, newest first. A folder of numbered files
+   (projects, say) is not a timeline, so it is left to the archive below. #}
+<section class="stream" aria-label="{{ t.latest }}">
+  {% for item in (items|rejectattr("category.section.ordered")|list)[:12] %}{{ m.entry(item) }}{% else %}<p>{{ t.nothing_yet }}</p>{% endfor %}
+</section>
+
+{# Everything else, by folder. #}
+<nav class="archive" aria-labelledby="archive-title">
+  <h2 id="archive-title">{{ t.archive }}</h2>
+  <ul>
+    {% for section in sections %}
+    <li><a href="{{ section.url }}">{{ section.name|ucfirst }}</a> <span class="count">{{ section.items|length }}</span>
+      {% if section.children %}<ul>{% for child in section.children %}<li><a href="{{ child.url }}">{{ child.name }}</a> <span class="count">{{ child.items|length }}</span></li>{% endfor %}</ul>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</nav>
+{% endblock %}

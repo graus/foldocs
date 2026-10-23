@@ -1,0 +1,17 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Local settings, secrets and generated data
+.env
+secrets/
+data/
+dist/
+
+.DS_Store
+
+# Claude Code, personal
+CLAUDE.local.md

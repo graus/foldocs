@@ -1,0 +1,67 @@
+/* base: the ground every theme stands on, loaded before the theme's own stylesheet. Elements
+   only, styled through the shared design tokens, which each theme defines (see README, "One
+   design system"); nothing here sets a color, font or size of its own.
+
+   Mobile first and fluid: no fixed widths, images never wider than their column, text that
+   scales with the browser setting, touch targets of at least 24px (WCAG 2.5.8). */
+
+*, *::before, *::after { box-sizing: border-box; }
+/* Every theme has a light and a dark mode: scrollbars and form controls follow the visitor's */
+:root { color-scheme: light dark; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; hanging-punctuation: first last; }
+body {
+  margin: 0; min-height: 100dvh; display: flex; flex-direction: column;
+  background: var(--color-bg); color: var(--color-text); font: var(--text-base)/1.6 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+main { flex: 1; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; overflow-wrap: anywhere; }
+img, svg, video, iframe { max-width: 100%; }
+img { display: block; height: auto; }
+h1, h2, h3, h4 { font-family: var(--font-heading); text-wrap: balance; overflow-wrap: break-word; }
+p, li, dd, figcaption { text-wrap: pretty; }
+:target { scroll-margin-top: var(--space-4); }
+/* An image in a document: as wide as the text, or the share of it the author gave it in the Doc */
+.prose figure { max-width: var(--width, 100%); }
+/* A table in a document: scrolls sideways on its own rather than widening the page */
+.table-wrap { overflow-x: auto; }
+.prose table { border-collapse: collapse; }
+.prose th { text-align: start; font-weight: 600; }
+
+/* Focus: a ring on whatever the keyboard reaches, never on a mouse click */
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+
+/* A profile elsewhere (LinkedIn, GitHub…): its logo, in the text's color, its name for screen readers */
+.profile { display: inline-flex; align-items: center; vertical-align: middle; }
+.profile .icon { width: 1.25em; height: 1.25em; }
+
+/* Hidden, but read out; the skip link appears on focus */
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skip-link { position: absolute; inset-inline-start: -999px; }
+.skip-link:focus { inset-inline-start: var(--space-2); inset-block-start: var(--space-2); z-index: 10; padding: var(--space-1) var(--space-2); background: var(--color-surface); color: var(--color-text); }
+
+/* The notice: a line atop every page, when the theme has one (e.g. while the design is a proposal) */
+.notice { margin: 0; padding: var(--space-1) var(--space-2); background: var(--color-text); color: var(--color-bg); font: var(--text-sm)/1.5 var(--font-ui, var(--font-body)); text-align: center; }
+.notice a { margin-inline-start: var(--space-1); font-weight: 600; color: inherit; }
+
+.not-found { padding-block: var(--space-5); }
+
+/* Motion only for those who have not asked for less (WCAG 2.3.3) */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+/* In forced colors (Windows high contrast), keep focus and the current page visible */
+@media (forced-colors: active) {
+  :focus-visible { outline-color: Highlight; }
+  [aria-current] { text-decoration: underline; }
+}
+
+/* On paper: the text, without the page's furniture, and where each link goes */
+@media print {
+  .skip-link, .notice, header nav, .crumbtrail, .pager, .pages, .siblings, .site-footer nav, .cta { display: none !important; }
+  body { background: none; color: #000; }
+  a { color: inherit; }
+  .prose a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 0.85em; overflow-wrap: anywhere; }
+  figure, img, tr, blockquote { break-inside: avoid; }
+  h1, h2, h3, h4 { break-after: avoid; }
+}

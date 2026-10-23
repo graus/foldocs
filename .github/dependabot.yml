@@ -1,0 +1,24 @@
+# Weekly updates of the Python dependencies (uv.lock), the actions CI uses, and the images the
+# Docker setup builds on. The images are pinned to a digest beside their tag, so a rebuild of the
+# same tag (a security fix in Debian or Alpine, a new Python patch release) arrives as a PR too.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker  # the Dockerfile's Python image
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: python  # 3.13 to 3.14 is a decision, not an update: keep it to patches
+        update-types: ["version-update:semver-minor"]
+  - package-ecosystem: docker-compose  # compose.yaml: Caddy
+    directory: /
+    schedule:
+      interval: weekly

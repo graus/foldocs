@@ -1,0 +1,60 @@
+# Serves the generated site inside the compose stack (the `web` service). TLS and the domain
+# live in the reverse proxy in front of it.
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	encode zstd gzip
+
+	# Media and static file names change when their content does.
+	@immutable path /media/* /static/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+	@pages not path /media/* /static/*
+	header @pages Cache-Control "public, max-age=300"
+
+	header X-Content-Type-Options nosniff
+	header Referrer-Policy strict-origin-when-cross-origin
+	# Only ever over https (the proxy in front serves it); no camera, microphone or location for any
+	# page; no other site may frame it (the demo page frames the site itself, so same origin may).
+	header Strict-Transport-Security "max-age=31536000"
+	header Permissions-Policy "camera=(), microphone=(), geolocation=(), browsing-topics=()"
+	header Cross-Origin-Opener-Policy same-origin
+	header X-Frame-Options SAMEORIGIN
+	header -Server
+
+	# A variant of the site is served at <name>.<host> when the sync built one by that name (the
+	# first part of the host name). Variants share the site's photos.
+	map {host} {first_label} {
+		~^([a-z0-9-]+)\. ${1}
+	}
+	@variant {
+		not path /media/*
+		file {
+			root /srv/variants/{first_label}
+			try_files /index.html
+		}
+	}
+
+	handle @variant {
+		root * /srv/variants/{first_label}
+		file_server
+	}
+	handle {
+		root * /srv/public
+		file_server
+	}
+	handle_errors 404 {
+		handle @variant {
+			root * /srv/variants/{first_label}
+			rewrite * /404.html
+			file_server
+		}
+		handle {
+			root * /srv/public
+			rewrite * /404.html
+			file_server
+		}
+	}
+}

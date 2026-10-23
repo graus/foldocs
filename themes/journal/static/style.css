@@ -1,0 +1,128 @@
+/* journal: a traditional blog. One column of serif text on paper, system fonts only.
+
+   1. Tokens       the shared design tokens (the same names in every theme), journal's values.
+   2. Base         links and the column, on top of base.css.
+   3. Components   meta lines, entries, the archive, pagination.
+   4. Layout       masthead and colophon.
+   5. Pages        a post's text.
+
+   Accessibility: text pairs meet WCAG AA (`foldocs check-theme` checks them, light and dark);
+   links are underlined; every interactive element shows a focus ring and is at least 24px tall. */
+
+/* 1. Tokens ------------------------------------------------------------------------------------- */
+
+:root {
+  --color-bg: #fdfcf9;
+  --color-surface: #ffffff;
+  --color-band: #f3efe7;
+  --color-text: #222222;
+  --color-text-secondary: #4a463f;
+  --color-text-muted: #6b665e;
+  --color-border: #e2ddd3;
+  --color-accent: #a0461c;
+  --color-accent-text: #8a3b12;     /* links */
+  --color-inverse-bg: #222222;
+  --color-inverse-text: #fdfcf9;
+  --color-inverse-muted: #c9c3b8;
+  --color-inverse-accent: #f0a77c;
+  --color-focus: #8a3b12;
+
+  --font-body: Charter, "Bitstream Charter", "Iowan Old Style", Georgia, serif;
+  --font-heading: var(--font-body);
+  --font-ui: system-ui, -apple-system, "Segoe UI", sans-serif;  /* dates, menus, captions */
+
+  --text-sm: 0.85rem;
+  --text-base: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.6rem;
+  --text-2xl: 2.4rem;
+
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 2rem;
+  --space-4: 2.5rem;
+  --space-5: 3rem;
+
+  --width-page: 40rem;
+  --width-text: 40rem;
+  --gutter: 1rem;
+  --radius: 0;
+  --border: 1px solid var(--color-border);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1a1918;
+    --color-surface: #232120;
+    --color-band: #262422;
+    --color-text: #e9e5de;
+    --color-text-secondary: #cdc7bd;
+    --color-text-muted: #a29c92;
+    --color-border: #34312d;
+    --color-accent: #e3a072;
+    --color-accent-text: #e3a072;
+    --color-inverse-bg: #2c2a27;
+    --color-inverse-text: #e9e5de;
+    --color-inverse-muted: #b8b2a8;
+    --color-inverse-accent: #f0b48e;
+    --color-focus: #e3a072;
+  }
+}
+
+/* 2. Base --------------------------------------------------------------------------------------- */
+
+body { font: var(--text-base)/1.7 var(--font-body); }
+a { color: var(--color-accent-text); text-underline-offset: 0.15em; }
+main, .masthead, .colophon { width: 100%; max-width: calc(var(--width-page) + 2 * var(--gutter)); margin: 0 auto; padding: 0 var(--gutter); }
+
+/* 3. Components --------------------------------------------------------------------------------- */
+
+.meta { margin: 0; color: var(--color-text-muted); font: var(--text-sm) var(--font-ui); }
+.meta a { color: var(--color-text-muted); }
+.intro { color: var(--color-text-secondary); font-size: var(--text-lg); font-style: italic; }
+.count { color: var(--color-text-muted); font: var(--text-sm) var(--font-ui); }
+
+.entry { padding-block: var(--space-3); border-bottom: var(--border); }
+.entry-title { margin: 0.25rem 0 var(--space-1); font-size: var(--text-xl); line-height: 1.25; }
+.entry-title a { color: inherit; text-decoration: none; }
+.entry-title a:hover { color: var(--color-accent-text); text-decoration: underline; }
+.entry img { margin: var(--space-2) 0; width: 100%; max-height: 26rem; object-fit: cover; }
+.entry-excerpt { margin: 0; }
+
+.archive { padding-block: var(--space-4); }
+.archive h2 { font: 600 var(--text-sm) var(--font-ui); text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-text-muted); }
+.archive ul { margin: 0; padding-inline-start: 1.2em; }
+.archive li { padding-block: 0.15rem; }
+
+.pages { display: flex; justify-content: space-between; gap: var(--space-2); padding-block: var(--space-3); font: 0.95rem var(--font-ui); }
+
+/* 4. Layout ------------------------------------------------------------------------------------- */
+
+.masthead { padding-block: var(--space-5) var(--space-3); text-align: center; border-bottom: var(--border); }
+/* A heading on the home page, a paragraph elsewhere: the heading font on every page */
+.site-title { margin: 0 0 var(--space-1); font-family: var(--font-heading); font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; }
+.site-title a { color: inherit; text-decoration: none; }
+.masthead nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 var(--space-2); font: 0.95rem var(--font-ui); }
+.masthead nav a { display: inline-block; padding-block: 0.25rem; color: var(--color-text); text-decoration: none; }
+.masthead nav a[aria-current] { color: var(--color-accent-text); text-decoration: underline; }
+.masthead nav .page { color: var(--color-text-secondary); }  /* the pages, after the folders */
+.masthead nav .rule { padding-block: 0.25rem; color: var(--color-text-muted); }
+main > .intro { margin: var(--space-4) 0 0; }
+main > .portrait { float: inline-end; width: 8rem; margin-block: var(--space-4) var(--space-2); margin-inline: var(--space-3) 0; }
+main > .portrait img { border-radius: 50%; aspect-ratio: 1; object-fit: cover; }
+.page-head > .prose { margin-top: var(--space-3); }
+.colophon { padding-block: var(--space-5); color: var(--color-text-muted); font: var(--text-sm) var(--font-ui); text-align: center; }
+.colophon a { color: var(--color-text-muted); }
+
+/* 5. Pages -------------------------------------------------------------------------------------- */
+
+.page-head { padding-block: var(--space-4) var(--space-2); }
+.page-head h1 { margin: 0.25rem 0; font-size: var(--text-2xl); line-height: 1.15; }
+.subfolders { font: 0.95rem var(--font-ui); }
+
+.prose > :first-child { margin-top: 0; }
+.prose :is(h2, h3) { line-height: 1.25; margin-top: var(--space-3); }
+figure { margin: var(--space-3) 0; }
+.prose blockquote { margin: var(--space-3) 0; padding-inline-start: 1.25rem; border-inline-start: 3px solid var(--color-border); font-style: italic; }
+.prose table { font: 0.95rem var(--font-ui); }
+.prose :is(td, th) { padding-block: 0.4rem; padding-inline: 0 0.8rem; border-bottom: var(--border); vertical-align: top; }
+figcaption { margin-top: var(--space-1); color: var(--color-text-muted); font: 0.9rem var(--font-ui); }

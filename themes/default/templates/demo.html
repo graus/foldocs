@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block main %}
+<section class="wrap section demo">
+  <div class="section-head">
+    <p class="eyebrow label">{{ t.demo }}</p>
+    <h1 class="section-title">{{ theme.extras.demo.label }}</h1>
+  </div>
+  <p class="lede">{{ t.demo_intro }}</p>
+  <div class="demo-panes">
+    <figure>
+      <figcaption class="label">{{ t.demo_in_drive }} <a href="{{ source.url }}" target="_blank" rel="noopener">{{ t.demo_open_drive }}</a></figcaption>
+      {% if source.embed %}<iframe src="{{ source.embed }}" title="{{ t.demo_drive_title }}" loading="lazy"></iframe>{% endif %}
+    </figure>
+    <figure>
+      <figcaption class="label">{{ t.demo_on_site }} <a href="/" target="_blank" rel="noopener">{{ t.demo_open_site }}</a></figcaption>
+      <iframe src="/" title="{{ t.demo_site_title }}" loading="lazy"></iframe>
+    </figure>
+  </div>
+  <p class="meta">{{ t.demo_note }}</p>
+</section>
+{% endblock %}

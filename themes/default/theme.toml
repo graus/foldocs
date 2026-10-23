@@ -1,0 +1,47 @@
+# default: the fixed part of a personal site (headline, intro, topics), then a row per folder.
+# It extends base (the words, the document); this file adds what is its own.
+
+extends = "base"
+stylesheets = ["style.css"]
+
+# Pages of the theme's own, rendered from a template; not in the menu.
+[extras.concept]
+url = "/how-it-works/"
+label = "How this site works"
+template = "concept.html"
+sources = ["drive"]  # it explains a Drive folder: a site from another source goes without
+description = "This site is made from a public Google Drive folder: what is in the folder is on the site."
+
+[extras.demo]
+url = "/demo/"
+label = "The folder behind this site"
+template = "demo.html"
+sources = ["drive"]  # Drive's folder view beside the site: other sources can't be framed
+description = "The Google Drive folder this site is made from, beside the site itself."
+
+# The words of this theme's templates, on top of base's. A theme that extends this one can
+# translate them by setting the same keys, and only those it changes.
+[strings]
+how_it_works = "How does this site work?"
+see_drive_folder = "See the Drive folder"
+# source_link = "Open in Google Docs ↗"            on each page: a link to its source in Drive
+# folder_source_link = "Open this folder in Drive ↗"  on a folder's page (both off unless set)
+breadcrumbs = "Breadcrumbs"
+footer_menu = "More"
+cta_title = "Contact"
+topics = "Topics"
+# add_image = "No image yet · add one in Drive"   on cards without an image (off unless set)
+see_all = "See all →"
+see_all_count = "See all {n} →"  # when the row shows only some of a section's pages
+in_folder = "In"
+categories = "Categories"
+all = "All"
+demo = "Demo"
+demo_intro = "On the left, the actual folder in Google Drive; on the right, the site built from it. Click through the folders and compare: every folder is a row, every document a page."
+demo_in_drive = "In Google Drive"
+demo_open_drive = "Open in Drive ↗"
+demo_on_site = "On the site"
+demo_open_site = "Open in a new window ↗"
+demo_note = "Change something in the folder, and it is on the site a few minutes later."
+demo_drive_title = "This site’s Google Drive folder"
+demo_site_title = "This site"

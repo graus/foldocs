@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block main %}
+<article class="wrap section concept">
+  <div class="section-head">
+    <p class="eyebrow label">About this site</p>
+    <h1 class="section-title">{{ theme.extras.concept.label }}</h1>
+  </div>
+  <p class="lede">This site is made in Google Drive. You put documents and photos in a public folder, and the site shows what is in it.</p>
+  {% if "demo" in theme.extras %}<p><a class="btn" href="{{ theme.extras.demo.url }}">See the folder beside the site</a></p>{% endif %}
+
+  <section aria-labelledby="do-h">
+    <h2 id="do-h">What you do</h2>
+    <ol class="steps">
+      <li><strong>Write a Google Doc or put a photo in a folder.</strong> In Drive, as usual.</li>
+      <li><strong>There is no publish step.</strong> Saving the document is enough.</li>
+      <li><strong>A few minutes later it is on the site.</strong> So is a change, or something you remove.</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="works-h">
+    <h2 id="works-h">What the program does</h2>
+    <p>A small program on a server looks in the folder every minute to see whether anything changed. If so, and nobody has touched the file for a few minutes, it makes the pages again. That way an edit in progress isn't published. The site is a copy of the folder, as plain web pages; there is no database.</p>
+    <p>The folder is public: anyone with the link can look in it, as anyone can see the site. That is why the program needs no login. It works the other way round too: everything in the folder goes on the site, so keep drafts elsewhere in your Drive until they are done.</p>
+  </section>
+
+  <section aria-labelledby="page-h">
+    <h2 id="page-h">How it gets onto the page</h2>
+    <p>Every folder is a page, and so is every document. Two names are special: a document called <code>intro</code> opens the page of its folder, and one called <code>design</code> sets your colors and fonts. Neither is a page itself.</p>
+    <p>The home page has two kinds of parts. <strong>Fixed parts</strong> always have the same place; you fill them with files in the shared folder itself, next to the other folders. <strong>Rows</strong> appear by themselves: every folder in it becomes a row.</p>
+
+    <div class="schema" role="img" aria-label="Sketch of the home page: the fixed parts at the top, below them a row per folder">
+      <div class="schema-block schema-block--fixed"><span>Headline, intro and portrait</span><code>intro + a photo</code></div>
+      <div class="schema-block schema-block--fixed"><span>Topics</span><code>intro (the list)</code></div>
+      <div class="schema-block schema-block--row"><span>Row: Work</span><code>folder 01 Work</code></div>
+      <div class="schema-block schema-block--row schema-block--dark"><span>Row: Personal</span><code>folder 02 Personal</code></div>
+      <div class="schema-block schema-block--row schema-block--new"><span>New row</span><code>a new folder, like 03 Talks</code></div>
+      <div class="schema-block schema-block--fixed"><span>Footer: email and profiles</span><code>intro (its links)</code></div>
+    </div>
+    <p class="schema-legend"><span class="key key--fixed"></span>fixed <span class="key key--row"></span>row, from a folder</p>
+
+    <div class="kinds">
+      <section>
+        <h3>Files in the shared folder</h3>
+        <dl>
+          <dt><code>intro</code></dt><dd>Not a page: it opens the home page. Its title is the headline, its subtitle the label above it, its first paragraph the intro, a heading and a list the topics. Its links to your email and profiles go in every page’s footer.</dd>
+          <dt>any other document</dt><dd>A page of its own, and a menu item: <code>About</code>, <code>Contact</code>, anything.</dd>
+          <dt><code>design</code></dt><dd>Not a page: a table with your colors and fonts.</dd>
+          <dt>a photo</dt><dd>The portrait (the newest one). Its Drive description is shown below it.</dd>
+        </dl>
+      </section>
+      <section>
+        <h3>Rows: every folder</h3>
+        <dl>
+          <dt>a folder</dt><dd>A row on the home page, a page of its own and a menu item.</dd>
+          <dt><code>intro</code></dt><dd>Optional: a document that opens the folder’s page. Its title renames the section (the address stays), its subtitle is the line under its name, on its page and on the home row; the rest comes before the folder’s pages.</dd>
+          <dt><code>01</code>, <code>02</code></dt><dd>A number before the folder’s name sets the order of the rows. The number is not shown.</dd>
+          <dt>a folder in a folder</dt><dd>A part within the row, like <code>writing</code> and <code>photos</code> within Personal.</dd>
+        </dl>
+      </section>
+    </div>
+  </section>
+
+  <section aria-labelledby="file-h">
+    <h2 id="file-h">What happens to a file</h2>
+    <dl class="files">
+      <dt>A document</dt>
+      <dd>Becomes a page. The paragraph styled <em>Title</em> is its title, the one styled <em>Subtitle</em> its summary. Headings, lists and photos come along; an indented paragraph becomes a quote. Word files work too.</dd>
+      <dt>A photo</dt>
+      <dd>Becomes a photo page, dated by the day it was taken. Its Drive description is the caption.</dd>
+      <dt>The order</dt>
+      <dd>Newest first. Put a date before a name (<code>2024-08-26 My old post</code>) to place an older piece back in time. Number every file in a folder (<code>01</code>, <code>02</code>) to set the order yourself.</dd>
+    </dl>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Why a folder</h2>
+    <ul>
+      <li><strong>You work in what you already know.</strong> Writing together, comments and suggestions work as always in Docs.</li>
+      <li><strong>Everything stays yours.</strong> The texts and photos live in your own Drive; the site only shows them.</li>
+      <li><strong>Any public folder can become a site like this.</strong> Sharing a folder with ‘anyone with the link’ is all the site needs from Drive.</li>
+      <li><strong>Plain web pages.</strong> There is no database or plugin to keep up to date.</li>
+    </ul>
+  </section>
+</article>
+{% endblock %}

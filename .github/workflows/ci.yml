@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:  # a newer push cancels the run it replaces
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Install
+        run: uv sync --locked
+      - name: Lint
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+      - name: Test
+        run: uv run pytest
+      - name: Package  # the wheel has the themes: an installed Foldocs finds them
+        run: |
+          uv build
+          uv venv /tmp/wheel && uv pip install --python /tmp/wheel dist/*.whl
+          /tmp/wheel/bin/foldocs --version && /tmp/wheel/bin/foldocs check-theme
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the image
+        run: docker build --tag foldocs .
+      - name: Run it
+        run: docker run --rm --entrypoint /app/.venv/bin/foldocs foldocs check-theme /app/themes/default

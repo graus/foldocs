@@ -1,0 +1,19 @@
+# index: the folder structure as the design. The home page is the tree of folders and files.
+# It extends base (the words, the document); this file changes its tone: lower
+# case, short months, as in a file manager.
+
+extends = "base"
+months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+home = "home"
+stylesheets = ["style.css"]
+
+[strings]
+description = "The work, writing and photos, as a tree of folders."
+path = "Path"
+feed = "feed"
+number = "no."
+more_in = "more in"
+updated = "updated"
+long_folder = "This folder is long; its tree above lists everything."
+not_found_text = "No such file or folder."
+go_home = "Back to the top"

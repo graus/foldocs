@@ -1,0 +1,57 @@
+{#- The document every theme's base.html extends: the <head> (title, description, link previews,
+    structured data, all worked out by the engine in head), the skip link and the notice
+    (the theme's `notice` word, if it has one).
+    A theme fills the blocks: header, main and footer, and head_extra for anything of its own. -#}
+{% import "_macros.html" as m %}
+<!doctype html>
+<html lang="{{ theme.language }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+{% for mode, color in theme_colors.items() %}<meta name="theme-color" content="{{ color }}" media="(prefers-color-scheme: {{ mode }})">
+{% endfor %}
+<title>{{ head.title }}</title>
+<meta name="description" content="{{ head.description }}">
+<meta name="author" content="{{ site.author }}">
+{% if noindex or head.noindex %}<meta name="robots" content="noindex, nofollow">{% endif %}
+{% if not head.noindex %}<link rel="canonical" href="{{ head.url }}">{% endif %}
+<meta property="og:site_name" content="{{ site.name }}">
+<meta property="og:type" content="{{ head.type }}">
+<meta property="og:url" content="{{ head.url }}">
+<meta property="og:title" content="{{ head.title }}">
+<meta property="og:description" content="{{ head.description }}">
+{% if head.image %}
+<meta property="og:image" content="{{ head.image.url }}">
+<meta property="og:image:width" content="{{ head.image.width }}">
+<meta property="og:image:height" content="{{ head.image.height }}">
+{% if head.image.alt %}<meta property="og:image:alt" content="{{ head.image.alt }}">{% endif %}
+{% endif %}
+{% if head.published %}<meta property="article:published_time" content="{{ head.published|iso }}">{% endif %}
+{% if head.modified %}<meta property="article:modified_time" content="{{ head.modified|iso }}">{% endif %}
+<meta name="twitter:card" content="{{ 'summary_large_image' if head.image else 'summary' }}">
+{% if head.ld %}<script type="application/ld+json">{{ head.ld }}</script>{% endif %}
+<link rel="alternate" type="application/atom+xml" title="{{ site.author }}" href="/feed.xml">
+{% if favicon %}<link rel="icon" href="{{ asset(favicon) }}" type="image/svg+xml">{% endif %}
+{% if touch_icon %}<link rel="apple-touch-icon" href="{{ asset(touch_icon) }}">{% endif %}
+{% block head_extra %}{% endblock %}
+{# A theme's own additions to every page's head (a verification tag, say): templates/_head.html, if it has one. #}
+{% include "_head.html" ignore missing %}
+{% for sheet in theme.stylesheets %}<link rel="stylesheet" href="{{ asset(sheet) }}">
+{% endfor %}
+</head>
+<body>
+<a class="skip-link" href="#main">{{ t.skip_to_content }}</a>
+{% block notice %}
+{% if notice or original_url %}
+<aside class="notice">{{ notice }}
+  {%- if original_url %} <a href="{{ original_url }}/">{{ t.back_to_original }}</a>{% endif %}</aside>
+{% endif %}
+{% endblock %}
+{% block header %}{% endblock %}
+<main id="main">
+{% block main %}{% endblock %}
+</main>
+{% block footer %}{% endblock %}
+</body>
+</html>

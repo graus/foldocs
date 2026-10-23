@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block main %}
+<article class="post">
+  <header class="page-head">
+    {% if item.category %}
+    <p class="meta">
+      {% if not item.category.section.ordered %}<time datetime="{{ item.date|iso }}">{{ item.date|date }}</time> · {% endif %}{{ m.tags(item) }}
+    </p>
+    {% endif %}
+    <h1>{{ item.heading }}</h1>
+    {% if item.subtitle %}<p class="intro">{{ item.subtitle }}</p>{% endif %}
+  </header>
+  {% if item.kind == "photo" %}
+  <figure>{{ picture(item.image, "(min-width: 42rem) 40rem, calc(100vw - 2rem)", alt=item.caption or item.heading, priority=true) }}{% if item.caption %}<figcaption>{{ item.caption }}</figcaption>{% endif %}</figure>
+  {% else %}
+  <div class="prose">
+    {{ item.html|safe }}
+  </div>
+  {% endif %}
+  {% if item.updated %}<p class="meta">{{ t.updated }} {{ item.updated|date }}</p>{% endif %}
+  {% if item.newer or item.older %}
+  <nav class="pages" aria-label="{{ t.more_in }} {{ item.category.section.name }}">
+    {% if item.newer %}<a href="{{ item.newer.url }}">← {{ item.newer.heading }}</a>{% else %}<span></span>{% endif %}
+    {% if item.older %}<a href="{{ item.older.url }}">{{ item.older.heading }} →</a>{% endif %}
+  </nav>
+  {% endif %}
+</article>
+{% endblock %}

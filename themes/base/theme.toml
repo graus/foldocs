@@ -1,0 +1,37 @@
+# base: what every theme shares, and is not a theme on its own. The document and its <head>
+# (templates/layout.html), the feed, the sitemap, a 404 page, the base stylesheet and the words
+# below. default, journal and index extend it; a theme of your own extends one of those.
+
+language = "en"
+months = ["January", "February", "March", "April", "May", "June",
+          "July", "August", "September", "October", "November", "December"]
+home = "Home"  # the first breadcrumb
+
+# Stylesheets, loaded in this order; a theme that extends this one adds its own after these.
+stylesheets = ["base.css"]
+
+# The words of the templates, by name. A theme that extends this one sets only the keys it
+# adds or changes. Some are used by the engine too, for titles and descriptions.
+[strings]
+description = "Projects, writing and photos."
+skip_to_content = "Skip to content"
+main_menu = "Main menu"
+feed = "RSS"
+portrait_of = "Portrait of"
+updated = "Updated"
+number = "No."
+newer = "Newer"
+older = "Older"
+previous = "Previous"
+next = "Next"
+pages = "Pages"
+more_in = "More in"  # before a section's name: the links to the next and previous item
+page = "Page"
+of = "of"
+by = "by"
+nothing_yet = "Nothing here yet."
+not_found = "Not found"
+not_found_text = "This page does not exist (any more)."
+go_home = "Go to the home page"
+back_to_original = "See the original design"  # on a variant, linking back
+# notice = "…"   a line atop every page, e.g. while the design is a proposal; none if unset

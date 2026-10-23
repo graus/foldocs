@@ -1,0 +1,113 @@
+/* index: the folder structure as the design. A tree of folders and files, set in monospace.
+
+   1. Tokens       the shared design tokens (the same names in every theme), index's values.
+   2. Base         links and the column, on top of base.css.
+   3. Components   the tree, sizes and dates.
+   4. Layout       the path bar.
+   5. Pages        a file's view.
+
+   Accessibility: text pairs meet WCAG AA (`foldocs check-theme` checks them, light and dark);
+   every interactive element shows a focus ring and is at least 24px tall. */
+
+/* 1. Tokens ------------------------------------------------------------------------------------- */
+
+:root {
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-band: #f4f3f0;
+  --color-text: #1d1d1b;
+  --color-text-secondary: #45443f;
+  --color-text-muted: #66635d;
+  --color-border: #e6e3dc;
+  --color-accent: #2156c4;          /* folders */
+  --color-accent-text: #2156c4;
+  --color-inverse-bg: #1d1d1b;
+  --color-inverse-text: #ffffff;
+  --color-inverse-muted: #c4c1ba;
+  --color-inverse-accent: #8fb0ff;
+  --color-focus: #2156c4;
+
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;  /* documents */
+  --font-heading: var(--font-ui);
+  --font-ui: ui-monospace, "SF Mono", Menlo, Consolas, monospace;  /* the tree, the bars, titles */
+
+  --text-sm: 0.85rem;
+  --text-base: 0.95rem;
+  --text-lg: 1.05rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.6rem;
+
+  --space-1: 0.25rem;
+  --space-2: 0.75rem;
+  --space-3: 1.25rem;
+  --space-4: 2rem;
+  --space-5: 3rem;
+
+  --width-page: 50rem;
+  --width-text: 38rem;
+  --gutter: 1rem;
+  --radius: 0;
+  --border: 1px solid var(--color-border);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #141414;
+    --color-surface: #1c1c1c;
+    --color-band: #1f1f1e;
+    --color-text: #e8e6e1;
+    --color-text-secondary: #c8c5bf;
+    --color-text-muted: #9a968e;
+    --color-border: #2c2b29;
+    --color-accent: #7aa2ff;
+    --color-accent-text: #7aa2ff;
+    --color-inverse-bg: #262626;
+    --color-inverse-text: #e8e6e1;
+    --color-inverse-muted: #b0aca4;
+    --color-inverse-accent: #9db9ff;
+    --color-focus: #7aa2ff;
+  }
+}
+
+/* 2. Base --------------------------------------------------------------------------------------- */
+
+body { font: var(--text-base)/1.6 var(--font-ui); }
+a { color: inherit; }
+main, .bar { width: 100%; max-width: var(--width-page); margin: 0 auto; padding: 0 var(--gutter); }
+.muted { color: var(--color-text-muted); }
+
+/* 3. Components --------------------------------------------------------------------------------- */
+
+/* The tree: folders in the accent with a slash, files indented below, sizes and dates on the right */
+.tree, .tree ul { list-style: none; margin: 0; padding: 0; }
+.tree ul { margin-inline-start: 0.6rem; padding-inline-start: var(--space-3); border-inline-start: var(--border); }
+.tree li { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: var(--space-3); }
+.tree li > ul { flex-basis: 100%; }
+.tree .name { display: inline-block; min-height: 1.5rem; padding-block: 0.15rem; text-decoration: none; }
+.tree .name:hover { text-decoration: underline; }
+.folder > .name { color: var(--color-accent-text); font-weight: 600; }
+.tree > .folder { padding-block: var(--space-2); border-top: var(--border); }
+.size { color: var(--color-text-muted); font-size: var(--text-sm); white-space: nowrap; }
+
+/* 4. Layout ------------------------------------------------------------------------------------- */
+
+.bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1) var(--space-3); padding-block: var(--space-3); border-bottom: var(--border); }
+/* Underlined: in a line of text, color alone does not mark a link (WCAG 1.4.1) */
+.path a { color: var(--color-accent-text); text-underline-offset: 0.2em; }
+.path a:hover { text-decoration-thickness: 2px; }
+.links { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); }
+.links a { color: var(--color-text-muted); }
+.readme { padding-block: var(--space-4) var(--space-2); font-family: var(--font-body); font-size: var(--text-lg); max-width: 36rem; }
+.readme .prose { font-size: inherit; }
+.readme > * + * { margin-top: var(--space-2); }
+.readme h1 { margin: 0 0 var(--space-1); font-size: var(--text-2xl); }
+
+/* 5. Pages -------------------------------------------------------------------------------------- */
+
+.file-view header { padding-block: var(--space-4) var(--space-2); }
+.file-view h1 { margin: 0; font-size: var(--text-xl); }
+.prose { font-family: var(--font-body); font-size: var(--text-lg); line-height: 1.7; max-width: var(--width-text); }
+.prose :is(h2, h3) { font-family: var(--font-heading); font-size: 1rem; margin-top: var(--space-4); }
+.prose blockquote { margin: var(--space-3) 0; padding-inline-start: var(--space-2); border-inline-start: 2px solid var(--color-accent); }
+figure { margin: var(--space-3) 0; }
+.prose :is(td, th) { padding-block: 0.3rem; padding-inline: 0 0.8rem; border-bottom: var(--border); vertical-align: top; }
+.siblings { display: flex; justify-content: space-between; gap: var(--space-2); padding-block: var(--space-4); border-top: var(--border); margin-top: var(--space-4); }

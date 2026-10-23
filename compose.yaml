@@ -1,0 +1,59 @@
+# Foldocs in Docker: `sync` mirrors the site's folder and builds the site into a volume,
+# `web` serves that volume. `web` joins an existing reverse proxy's network (PROXY_NETWORK),
+# which reaches it at http://COMPOSE_PROJECT_NAME:80; TLS and the domain live in the proxy.
+# Settings come from .env (see .env.example); THEME_DIR is mounted into the container.
+
+services:
+  sync:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data  # the volume, whatever .env says
+      THEME_DIR: /theme
+    volumes:
+      - ${THEME_DIR:-./themes/default}:/theme:ro
+      - site:/data
+    # Root only to hand the volume to the foldocs user (see Dockerfile), then nothing more.
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID]
+    security_opt: [no-new-privileges:true]
+    read_only: true  # it writes to the volume only
+    tmpfs: [/tmp]
+    deploy:
+      resources:
+        limits:
+          memory: 512m  # resizing large photos
+          cpus: "1.0"
+          pids: 64
+
+  web:
+    image: caddy:2-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+    restart: unless-stopped
+    depends_on: [sync]  # sync mounts the new volume first, so the volume takes sync's ownership
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - site:/srv:ro
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]  # port 80
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/config, /data]  # Caddy's own state, which it keeps none of here
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          pids: 64
+    expose:
+      - "80"
+    networks:
+      proxy:
+        aliases: ["${COMPOSE_PROJECT_NAME:-foldocs}"]
+
+networks:
+  proxy:
+    name: ${PROXY_NETWORK:?set PROXY_NETWORK to your reverse proxy's Docker network}
+    external: true
+
+volumes:
+  site:

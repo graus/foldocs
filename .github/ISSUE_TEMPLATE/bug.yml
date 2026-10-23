@@ -1,0 +1,23 @@
+name: Something doesn't work
+description: A page that comes out wrong, a sync that fails, a theme that breaks
+body:
+  - type: textarea
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Where the folder lives
+      options: [Google Drive, Nextcloud]
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Foldocs version and theme
+      placeholder: "foldocs --version; default, journal, index or your own"
+  - type: textarea
+    attributes:
+      label: The log
+      description: What `foldocs sync` or the sync container printed. Leave out your folder's link and any key.
+      render: text

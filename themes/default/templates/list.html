@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block main %}
+<section class="wrap section">
+  <div class="section-head">
+    <h1 class="section-title">{{ category.name|ucfirst }}</h1>
+    {% if category.description %}<p class="section-intro">{{ category.description }}</p>{% endif %}
+    {% if t.folder_source_link is defined and category.source_url %}<a class="source-link label" href="{{ category.source_url }}" target="_blank" rel="noopener">{{ t.folder_source_link }}</a>{% endif %}
+  </div>
+  {% if category.intro and page == 1 %}<div class="section-body prose">{{ category.intro|safe }}</div>{% endif %}
+  {% if category.children %}
+  <div class="section-bar">{{ m.filters(category.section if category.parent.parent else category, category) }}</div>
+  {% endif %}
+  {% if items %}{{ m.cards(items, 2, eager=3 if page == 1 else 0) }}{% else %}<p class="empty">{{ t.nothing_yet }}</p>{% endif %}
+  {% if page_count > 1 %}
+  <nav class="pager pager--pages" aria-label="{{ t.pages }}">
+    {% if newer_url %}<a rel="prev" href="{{ newer_url }}">← {{ t.previous }}</a>{% else %}<span></span>{% endif %}
+    <span class="meta">{{ t.page }} {{ page }} {{ t.of }} {{ page_count }}</span>
+    {% if older_url %}<a rel="next" href="{{ older_url }}">{{ t.next }} →</a>{% else %}<span></span>{% endif %}
+  </nav>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block main %}
+{# The tree below names the folder already; the heading is for screen readers and outlines. #}
+<h1 class="visually-hidden">{{ category.name }}</h1>
+{% if category.description or (category.intro and page == 1) %}
+<div class="readme">
+  {% if category.description %}<p>{{ category.description }}</p>{% endif %}
+  {% if category.intro and page == 1 %}<div class="prose">{{ category.intro|safe }}</div>{% endif %}
+</div>
+{% endif %}
+<ul class="tree">{{ m.tree(category) }}</ul>
+{% if page_count > 1 %}<p class="muted">{{ t.long_folder }}</p>{% endif %}
+{% endblock %}

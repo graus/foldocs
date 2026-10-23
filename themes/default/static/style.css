@@ -1,0 +1,344 @@
+/* default: a plain skeleton to build a design on.
+
+   1. Tokens       every color, font, size and distance, by name. Restyle here.
+   2. Base         headings, links, the page width (on top of base.css).
+   3. Components   small parts used across pages: labels, buttons, subnavs, cards, breadcrumbs.
+   4. Layout       the header, sections, the label column, the footer.
+   5. Pages        home, item, list, "how it works" and demo.
+
+   Accessibility: text pairs meet WCAG AA (4.5:1; `foldocs check-theme` checks them, light and
+   dark). The accent color is for shapes and large text; small accent text uses
+   --color-accent-text. Every interactive element shows a focus ring and is at least 24px tall.
+
+   Structure comes from type, space and the bands, not from boxes: no card borders, no shadows,
+   square corners, and a hairline only where a block starts (above an entry, above the pager). */
+
+/* The heading face, made small (29 KB): Latin only, the 96pt optical size, weights 600 to 700,
+   the only ones the headings use. base.html preloads it at this same URL. */
+@font-face { font-family: "Bricolage Grotesque"; src: url(fonts/bricolage-grotesque.woff2) format("woff2"); font-weight: 600 700; font-display: swap; }
+
+/* 1. Tokens ------------------------------------------------------------------------------------- */
+
+:root {
+  --color-bg: #fafaf8;
+  --color-surface: #ffffff;         /* cards, panels */
+  --color-band: #f0efeb;            /* a light band, and empty image panels */
+  --color-text: #1f1e1c;
+  --color-text-secondary: #4d4b47;  /* intros, excerpts */
+  --color-text-muted: #68655f;      /* dates, counts, labels */
+  --color-border: #dddad4;
+  --color-accent: #d9431c;          /* shapes and large text */
+  --color-accent-text: #b0350e;     /* the accent for small text */
+  --color-inverse-bg: #1f1e1c;      /* a dark band */
+  --color-inverse-text: #fafaf8;
+  --color-inverse-muted: #c9c6c0;
+  --color-inverse-accent: #ff8a63;
+  --color-focus: #b0350e;
+
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-heading: "Bricolage Grotesque", var(--font-body);
+  --font-ui: var(--font-body);  /* labels, menus, buttons, dates */
+
+  /* One scale, 18px × 1.25^n */
+  --text-sm: 0.9rem;        /* 14.4 labels, buttons, meta */
+  --text-base: 1.125rem;    /* 18   body */
+  --text-reading: 1.25rem;  /* 20   long text */
+  --text-lg: 1.406rem;      /* 22.5 logo, intros, card titles */
+  --text-xl: 1.758rem;      /* 28   headings in text */
+  --text-2xl: 2.197rem;     /* 35   section titles, the closing block */
+  --text-3xl: 4.291rem;     /* 69   page titles, the home headline */
+
+  /* Five distances: every gap, padding and margin is one of them */
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 3rem;
+  --space-5: 6rem;
+
+  --width-page: 72rem;
+  --width-text: 34em;
+  --width-label: 13.75rem;  /* the label column beside text */
+  --gutter: var(--space-4);
+  --radius: 0;
+  --border: 1px solid var(--color-border);
+}
+@media (max-width: 40rem) {
+  :root { --space-4: 2rem; --space-5: 4rem; --gutter: var(--space-2); }
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #171716;
+    --color-surface: #232321;
+    --color-band: #1f1f1d;
+    --color-text: #eeece8;
+    --color-text-secondary: #c9c6c0;
+    --color-text-muted: #a29e97;
+    --color-border: #363531;
+    --color-accent: #ff6a3d;
+    --color-accent-text: #ff8a63;
+    --color-inverse-bg: #2c2b28;
+    --color-inverse-text: #eeece8;
+    --color-inverse-muted: #b8b4ad;
+    --color-inverse-accent: #ff9b78;
+    --color-focus: #ff8a63;
+  }
+}
+
+/* 2. Base --------------------------------------------------------------------------------------- */
+/* On top of base.css (the reset, focus, skip link, draft notice): this theme's elements. */
+
+p { margin: 0; }
+h1, h2, h3, h4 { margin: 0; font-weight: 600; line-height: 1.15; letter-spacing: -0.02em; }
+a { color: inherit; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+a:hover { color: var(--color-accent-text); }
+code { padding: 0 0.3em; border-radius: var(--radius); background: var(--color-band); font-size: 0.9em; }
+.wrap { width: 100%; max-width: calc(var(--width-page) + 2 * var(--gutter)); margin-inline: auto; padding-inline: var(--gutter); }
+
+/* 3. Components --------------------------------------------------------------------------------- */
+
+/* Small text, in one size: labels (upper case) and meta (dates, counts, captions) */
+.label { font: 600 var(--text-sm)/1.5 var(--font-ui); text-transform: uppercase; letter-spacing: 0.08em; }
+.meta { font: 400 var(--text-sm)/1.5 var(--font-ui); color: var(--color-text-muted); }
+.eyebrow { color: var(--color-text-muted); }
+.signal { color: var(--color-accent); }
+
+.btn {
+  display: inline-flex; align-items: center; min-height: 3rem; padding: 0 var(--space-3);
+  border-radius: var(--radius); background: var(--color-text); color: var(--color-bg);
+  font: 600 var(--text-sm) var(--font-ui); text-decoration: none;
+}
+.btn:hover { background: var(--color-accent-text); color: var(--color-bg); }
+
+/* A subnav: a folder's subfolders as plain links, each with its size; the current one underlined */
+.subnav { display: flex; flex-wrap: wrap; gap: 0 var(--space-3); }
+.subnav-link { display: inline-flex; align-items: baseline; gap: 0.4em; padding-block: var(--space-1); font: 600 var(--text-sm) var(--font-ui); text-decoration: none; }
+.subnav-link .count { font-weight: 400; color: var(--color-text-muted); }
+.subnav-link:hover, .subnav-link[aria-current] { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.4em; }
+.subnav-link[aria-current] { text-decoration-color: var(--color-accent); }
+
+/* A card: one file of a folder. No box: an image (or a quiet panel of the same shape), then
+   text on the page itself. The title's link covers the card (::after), so all of it is clickable. */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr)); gap: var(--space-4) var(--space-3); }
+.card { position: relative; display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.card-media { margin-bottom: var(--space-1); }
+.card-media img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: var(--radius); }
+.card-media--empty {
+  display: flex; align-items: flex-end; aspect-ratio: 3 / 2; padding: var(--space-2); border-radius: var(--radius);
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+.card-media--empty .label, .card-hint { opacity: 0.75; }
+/* A document without an image: its opening lines, fading out, like a thumbnail in Drive */
+.card-media--text {
+  display: flex; flex-direction: column; gap: var(--space-2); aspect-ratio: 3 / 2; overflow: hidden; padding: var(--space-3); border-radius: var(--radius);
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+.card-media--text p {
+  flex: 1; min-height: 0; overflow: hidden; font-size: var(--text-lg); line-height: 1.45; opacity: 0.85;
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+}
+/* A drawing or diagram is fitted, on its own ground color; a photo fills the frame */
+.card-media img[data-graphic] { object-fit: contain; }
+.card-title { font-size: var(--text-lg); line-height: 1.2; letter-spacing: -0.015em; }
+.card-title a { text-decoration: none; }
+.card-title a::after { content: ""; position: absolute; inset: 0; }
+.card-title a:focus-visible { outline: none; }
+.card-title a:focus-visible::after { outline: 2px solid var(--color-focus); outline-offset: var(--space-1); }
+.card:hover .card-title a { color: inherit; text-decoration: underline; text-decoration-thickness: 2px; text-decoration-color: var(--color-accent); }
+.card-excerpt { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; color: var(--color-text-secondary); }
+
+/* Breadcrumbs: the Drive folders above a page */
+.crumbtrail ol { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0; padding: var(--space-1) 0 0; list-style: none; font-size: var(--text-sm); color: var(--color-text-muted); }
+.crumbtrail li + li::before { content: "/"; content: "/" / ""; margin-inline-end: var(--space-1); }  /* not read out */
+.crumbtrail a { display: inline-block; min-height: 1.5rem; color: var(--color-text-secondary); text-decoration: none; }
+.crumbtrail a:hover { color: var(--color-accent-text); text-decoration: underline; }
+.crumbtrail [aria-current] { color: var(--color-text); }
+
+/* Previous and next: two columns under one hairline */
+.pager { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin-top: var(--space-5); padding-top: var(--space-3); border-top: var(--border); }
+@media (max-width: 40rem) { .pager { grid-template-columns: minmax(0, 1fr); } }
+.pager a { display: flex; flex-direction: column; gap: var(--space-1); font: 600 var(--text-lg)/1.2 var(--font-heading); text-decoration: none; }
+.pager a:hover { color: inherit; text-decoration: underline; text-decoration-thickness: 2px; text-decoration-color: var(--color-accent); }
+.pager a .label { color: var(--color-text-muted); }
+.pager-next { text-align: end; }
+.pager--pages { display: flex; justify-content: space-between; align-items: center; }
+.pager--pages a { padding-block: var(--space-1); font: 600 var(--text-sm) var(--font-ui); }
+
+/* 4. Layout ------------------------------------------------------------------------------------- */
+
+.site-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-3); padding-block: var(--space-3); }
+.brand { font: 700 var(--text-lg) var(--font-heading); letter-spacing: -0.02em; text-decoration: none; }
+.brand img { display: block; height: 2rem; width: auto; }  /* a theme's logo.svg, at the name's height */
+.surname { color: var(--color-accent); }
+.site-nav { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.site-nav a { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 var(--space-2); font: 600 var(--text-sm) var(--font-ui); text-decoration: none; }
+.site-nav .site-nav-page { color: var(--color-text-secondary); font-weight: 500; }
+.site-nav-rule { align-self: center; width: 1px; height: 1.25em; margin-inline: var(--space-1); background: var(--color-border); }
+@media (max-width: 40rem) { .site-nav-rule { flex-basis: 100%; width: auto; height: 0; margin: 0; } }  /* the pages on a line of their own */
+/* A section's subfolders: a chevron beside its name, opening a list below it */
+.site-nav-group { position: relative; display: flex; align-items: center; }
+.site-nav-group > a { padding-inline-end: var(--space-1); }
+.site-nav-more summary {
+  display: grid; place-items: center; width: 1.75rem; min-height: 2.75rem; margin-inline-end: var(--space-1);
+  list-style: none; cursor: pointer;
+}
+.site-nav-more summary::-webkit-details-marker { display: none; }
+.site-nav-more summary::before {
+  content: ""; width: 0.45em; height: 0.45em; border: solid currentColor; border-width: 0 1.5px 1.5px 0;
+  translate: 0 -25%; rotate: 45deg;
+}
+.site-nav-more[open] summary::before { translate: 0 25%; rotate: -135deg; }
+.site-nav-more ul {
+  position: absolute; inset-inline-start: 0; inset-block-start: 100%; z-index: 10;
+  min-width: max(100%, 12rem); max-width: calc(100vw - 2 * var(--gutter)); margin: 0; padding: var(--space-1) 0;
+  list-style: none; background: var(--color-surface); border: var(--border); border-radius: var(--radius);
+}
+/* On a phone, the list spans the menu's width, just below the section it belongs to */
+@media (max-width: 40rem) {
+  .site-nav { position: relative; }
+  .site-nav-group { position: static; }
+  .site-nav-more ul { inset-inline: 0; inset-block-start: auto; min-width: 0; max-width: none; }
+}
+.site-nav .site-nav-more a { display: flex; min-height: 2.5rem; padding-inline: var(--space-2); font-weight: 500; }
+.site-nav-more a:hover { color: var(--color-accent-text); }
+.site-nav a[aria-current] { text-decoration: underline; text-decoration-color: var(--color-accent); text-decoration-thickness: 2px; text-underline-offset: 0.4em; }
+
+/* A section of a page: an optional label, the title (and a link on the right), an intro, then content */
+.section { padding-block: var(--space-4); }
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); margin-bottom: var(--space-3); }
+.section-head .eyebrow { flex-basis: 100%; }
+.section-head > a { font: 600 var(--text-sm) var(--font-ui); }
+.section-head .subnav { flex-basis: 100%; }
+.section-title { font-size: clamp(1.75rem, 3vw, var(--text-2xl)); line-height: 1.1; letter-spacing: -0.025em; }
+.section-intro { flex-basis: 100%; max-width: 40em; color: var(--color-text-secondary); }
+.empty { color: var(--color-text-secondary); }
+
+/* A label column beside a content column; they stack below ~900px. The one rule on a page sits above them. */
+.split { display: flex; flex-wrap: wrap; gap: var(--space-3); padding-top: var(--space-3); border-top: var(--border); }
+.split-label { flex: 1 1 var(--width-label); }
+.split-body { flex: 999 1 37.5rem; min-width: 0; }
+
+.site-footer { padding-block: var(--space-5) var(--space-4); }
+.cta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); padding-block: var(--space-4); border-block: var(--border); }
+.cta h2 { flex: 999 1 25rem; font-size: var(--text-2xl); line-height: 1.1; letter-spacing: -0.03em; }
+.footer-line { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2) var(--space-3); }
+.footer-line nav { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); }
+
+/* 5. Pages -------------------------------------------------------------------------------------- */
+
+/* Home, the fixed part: hero and topics, as one block */
+.intro { display: grid; gap: var(--space-4); padding-block: var(--space-4) var(--space-5); }
+.hero { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); }
+.hero-text { flex: 999 1 35rem; min-width: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.display { font-size: clamp(2.5rem, 5.5vw, var(--text-3xl)); line-height: 1.02; letter-spacing: -0.035em; }
+.lede { max-width: 32em; font-size: var(--text-lg); line-height: 1.5; color: var(--color-text-secondary); }
+.hero-portrait { flex: 0 1 15rem; display: flex; flex-direction: column; gap: var(--space-1); margin: 0; }
+.portrait img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; object-position: 50% 20%; border-radius: var(--radius); }
+.topics { display: grid; gap: var(--space-2); }
+/* The topics: a numbered list in columns, the number above each one */
+.topic-list {
+  list-style: none; counter-reset: topic; margin: 0; padding: 0; display: grid; gap: var(--space-2) var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+  font: 600 var(--text-base)/1.3 var(--font-heading); hyphens: auto; overflow-wrap: break-word;
+}
+.topic-list li { counter-increment: topic; display: flex; flex-direction: column; gap: var(--space-1); }
+.topic-list li::before { content: counter(topic, decimal-leading-zero); font: 600 var(--text-sm) var(--font-ui); color: var(--color-accent-text); }
+
+/* Home, the rows: one per top-level folder, on two alternating bands */
+.row { padding-block: var(--space-4) var(--space-5); }
+.row--light { background: var(--color-band); }
+.row--dark { background: var(--color-inverse-bg); color: var(--color-inverse-text); }
+.row--dark a { color: var(--color-inverse-text); }
+.row--dark :is(.section-intro, .meta, .card-excerpt, .count) { color: var(--color-inverse-muted); }
+.row--dark .card:hover .card-title a, .row--dark .subnav-link:hover { text-decoration-color: var(--color-inverse-accent); }
+.section-title a { text-decoration: none; }
+
+/* Item: a post, photo or page */
+.entry { padding-block: var(--space-3) 0; }
+.entry-meta { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+.source-link { color: var(--color-accent-text); }
+.entry-header { display: flex; flex-direction: column; gap: var(--space-3); }
+.title { font-size: clamp(2.25rem, 4.5vw, var(--text-3xl)); line-height: 1.05; letter-spacing: -0.03em; }
+.photo { display: flex; flex-wrap: wrap-reverse; align-items: flex-end; gap: var(--space-3); margin: var(--space-4) 0 0; padding-top: 0; border-top: 0; }
+/* The photo at its own shape: never wider than the column, never taller than the screen. */
+.photo img { width: auto; max-width: 100%; max-height: 85vh; border-radius: var(--radius); }
+
+/* The text: in the content column; images too, at most its width (or the share of it they
+   have in the Doc: --width, set by the engine); tables reach to the right edge */
+.body {
+  display: grid; grid-template-columns: minmax(0, var(--width-label)) minmax(0, var(--width-text)) minmax(0, 1fr);
+  column-gap: var(--space-3); margin-top: var(--space-4); font-size: var(--text-reading); line-height: 1.7;
+}
+.body > * { grid-column: 2; }
+.body > .table-wrap { grid-column: 2 / -1; }
+@media (max-width: 57rem) {
+  .body { grid-template-columns: minmax(0, 1fr); }
+  .body > *, .body > .table-wrap { grid-column: 1; }
+}
+.prose > * + * { margin-top: var(--space-3); }
+.prose > :is(h2, h3, h4) { margin-top: var(--space-4); }
+.prose > :is(h2, h3, h4) + * { margin-top: var(--space-2); }
+.prose h2 { font-size: var(--text-xl); }
+.prose h3 { font-size: var(--text-lg); }
+.prose :is(h4, h5, h6) { font-size: var(--text-reading); }
+.prose :is(ul, ol) { margin-bottom: 0; padding-inline-start: 1.1em; }
+.prose li + li, .prose li > :is(ul, ol) { margin-top: var(--space-1); }
+.prose strong { font-weight: 600; }
+.prose a { text-decoration-color: var(--color-accent); }
+.prose figure { margin-inline: 0; margin-bottom: 0; }
+/* Grid items don't collapse margins, so the space around a figure is set from one side only. */
+.prose > figure, .prose > figure + * { margin-top: var(--space-4); }
+.prose figure img { border-radius: var(--radius); }
+.prose hr { margin-block: var(--space-4); border: 0; border-top: var(--border); }
+.prose blockquote { margin-inline: 0; padding-inline-start: var(--space-3); border-inline-start: 3px solid var(--color-accent); font-size: var(--text-lg); line-height: 1.45; color: var(--color-text-secondary); }
+.prose table { font-size: var(--text-sm); line-height: 1.5; }
+.prose :is(td, th) { padding-block: var(--space-1); padding-inline: 0 var(--space-2); border-bottom: var(--border); vertical-align: top; }
+.prose th { border-bottom-color: var(--color-text); }
+.prose sup { line-height: 0; }
+
+/* List: a folder's page */
+.section-body { max-width: 40em; margin-bottom: var(--space-5); }
+.section-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-4); }
+
+/* How it works */
+.concept { max-width: 48rem; }
+.concept > * + * { margin-top: var(--space-4); }
+.concept .section-head { margin-bottom: 0; }
+.concept .lede { margin-top: var(--space-2); }
+.concept h2 { margin-bottom: var(--space-2); font-size: var(--text-xl); }
+.concept h3 { margin-bottom: var(--space-1); font-size: var(--text-lg); }
+.concept p + p, .concept p + .schema, .concept .schema-legend { margin-top: var(--space-2); }
+.steps { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.steps li { counter-increment: step; position: relative; min-height: 2rem; padding-inline-start: calc(2rem + var(--space-2)); }
+.steps li::before {
+  content: counter(step); position: absolute; inset-inline-start: 0; inset-block-start: -0.15rem; display: grid; place-items: center; width: 2rem; height: 2rem;
+  border-radius: 50%; background: var(--color-text); color: var(--color-bg); font: 600 var(--text-sm) var(--font-heading);
+}
+/* A sketch of the home page: fixed parts outlined, rows filled, the dark row dark */
+.schema { display: grid; gap: var(--space-1); padding: var(--space-2); border: var(--border); border-radius: var(--radius); background: var(--color-surface); }
+.schema-block { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-1) var(--space-3); padding: var(--space-2); border-radius: var(--radius); font-weight: 600; }
+.schema-block code { font-weight: 400; }
+.schema-block--fixed { border: 1.5px dashed var(--color-text-muted); }
+.schema-block--row { background: var(--color-band); }
+.schema-block--dark { background: var(--color-inverse-bg); color: var(--color-inverse-text); }
+.schema-block--dark code { background: transparent; color: var(--color-inverse-muted); }
+.schema-block--new { border: 1.5px dashed var(--color-accent); background: none; color: var(--color-accent-text); }
+.schema-legend { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); color: var(--color-text-muted); font-size: var(--text-sm); }
+.key { display: inline-block; width: 1.5rem; height: 1rem; vertical-align: middle; }
+.key--fixed { border: 1.5px dashed var(--color-text-muted); }
+.key--row { background: var(--color-band); border: var(--border); }
+.kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr)); gap: var(--space-3); margin-top: var(--space-3); }
+.kinds > section { padding-top: var(--space-2); border-top: 2px solid var(--color-text); }
+.kinds dl, .files { display: grid; gap: var(--space-1); margin: 0; }
+.kinds dt, .files dt { font-weight: 600; }
+.kinds dd, .files dd { margin: 0 0 var(--space-1); color: var(--color-text-secondary); }
+.why ul { margin: 0; padding-inline-start: 1.1em; }
+.why li + li { margin-top: var(--space-1); }
+
+/* Demo: the Drive folder beside the site */
+.demo > * + * { margin-top: var(--space-3); }
+.demo .section-head { margin-bottom: 0; }
+.demo-panes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(26rem, 100%), 1fr)); gap: var(--space-3); }
+.demo-panes figure { margin: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.demo-panes figcaption { display: flex; justify-content: space-between; gap: var(--space-2); color: var(--color-text-muted); }
+.demo-panes figcaption a { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.demo-panes iframe { width: 100%; height: min(70vh, 40rem); border: var(--border); border-radius: var(--radius); background: #fff; }  /* Drive's folder view is white in either mode */

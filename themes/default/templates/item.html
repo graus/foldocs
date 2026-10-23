@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block main %}
+<article class="entry wrap">
+  <div class="split">
+    <div class="split-label entry-meta label">
+      {% if item.category and not item.category.section.ordered %}
+      <time datetime="{{ item.date|iso }}">{{ item.date|date }}</time>
+      {% if item.updated %}<span>{{ t.updated }} <time datetime="{{ item.updated|iso }}">{{ item.updated|date }}</time></span>{% endif %}
+      {% endif %}
+      {# Only in a theme that sets source_link: the site otherwise never leads to Drive. #}
+      {% if t.source_link is defined and item.source_url %}<a class="source-link" href="{{ item.source_url }}" target="_blank" rel="noopener">{{ t.source_link }}</a>{% endif %}
+    </div>
+    <header class="split-body entry-header">
+      <h1 class="title">{{ item.heading }}</h1>
+      {% if item.subtitle %}<p class="lede">{{ item.subtitle }}</p>{% endif %}
+    </header>
+  </div>
+
+  {% if item.kind == "photo" %}
+  <figure class="photo split">
+    {% if item.caption %}<figcaption class="split-label meta">{{ item.caption }}</figcaption>{% else %}<span class="split-label"></span>{% endif %}
+    <div class="split-body">{{ picture(item.image, "(min-width: 78rem) 57rem, (min-width: 59rem) calc(100vw - 21rem), (min-width: 40rem) calc(100vw - 6rem), calc(100vw - 2rem)", alt=item.caption or item.title or "", priority=true) }}</div>
+  </figure>
+  {% else %}
+  <div class="body prose">
+    {{ item.html|safe }}
+  </div>
+  {% endif %}
+
+  {% if item.newer or item.older %}
+  {% set ordered = item.category.section.ordered %}
+  <nav class="pager" aria-label="{{ t.more_in }} {{ item.category.section.name }}">
+    {% if item.newer %}<a rel="prev" href="{{ item.newer.url }}"><span class="label">← {{ t.previous if ordered else t.newer }}</span>{{ item.newer.heading }}</a>{% else %}<span></span>{% endif %}
+    {% if item.older %}<a rel="next" class="pager-next" href="{{ item.older.url }}"><span class="label">{{ t.next if ordered else t.older }} →</span>{{ item.older.heading }}</a>{% endif %}
+  </nav>
+  {% endif %}
+</article>
+{% endblock %}

@@ -1,0 +1,15 @@
+{# A folder as a tree: its own files, then its subfolders, each with theirs. #}
+{% macro tree(folder) %}
+<li class="folder">
+  <a class="name" href="{{ folder.url }}">{{ folder.name }}/</a><span class="size">{{ folder.items|length }}</span>
+  <ul>
+    {% for item in folder.items if item.category is sameas folder %}
+    <li class="file">
+      <a class="name" href="{{ item.url }}">{{ item.heading }}</a>
+      <span class="size">{% if folder.section.ordered %}{{ "%02d"|format(item.number) }}{% else %}{{ item.date|date }}{% endif %}</span>
+    </li>
+    {% endfor %}
+    {% for child in folder.children %}{{ tree(child) }}{% endfor %}
+  </ul>
+</li>
+{% endmacro %}

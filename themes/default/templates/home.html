@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block main %}
+{# The fixed part: everything from the files in the root folder, as one block. #}
+<header class="intro wrap">
+  <div class="hero">
+    <div class="hero-text">
+      {% if hero.label %}<p class="eyebrow label">{{ hero.label }}</p>{% endif %}
+      <h1 class="display">{% if hero.headline == site.author %}{{ m.name(site.author) }}{% else %}{{ hero.headline|signal }}{% endif %}</h1>
+      {% if hero.intro %}<p class="lede">{{ hero.intro }}</p>{% endif %}
+    </div>
+    {% if portrait %}
+    <figure class="hero-portrait">
+      <div class="portrait">{{ picture(portrait, "15rem", alt=t.portrait_of ~ " " ~ site.author, priority=true) }}</div>
+      {% if portrait_label %}<figcaption class="meta">{{ portrait_label }}</figcaption>{% endif %}
+    </figure>
+    {% endif %}
+  </div>
+  {% if hero.items %}
+  <section class="topics" aria-labelledby="topics-h">
+    <h2 id="topics-h" class="label eyebrow">{{ hero.list_title or t.topics }}</h2>
+    <ol class="topic-list">
+      {% for text in hero.items %}<li>{{ text }}</li>{% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+</header>
+
+{# Then a row per top-level folder, in the folders' order, alternating two bands: its name, the
+   intro Doc's subtitle and the subfolders, and its first cards. "See all" says how many there are
+   when the row doesn't show them all. #}
+{% set shown = 3 %}
+{% for section in sections %}
+<section class="row {{ loop.cycle('row--light', 'row--dark') }}" aria-labelledby="row-{{ loop.index }}">
+  <div class="wrap">
+    <header class="section-head">
+      <h2 id="row-{{ loop.index }}" class="section-title"><a href="{{ section.url }}">{{ section.name|ucfirst }}</a></h2>
+      <a href="{{ section.url }}">{% if section.items|length > shown %}{{ t.see_all_count|replace("{n}", section.items|length) }}{% else %}{{ t.see_all }}{% endif %}</a>
+      {% if section.description %}<p class="section-intro">{{ section.description }}</p>{% endif %}
+      {% if section.children %}
+      <nav class="subnav" aria-label="{{ t.in_folder }} {{ section.name }}">
+        {% for child in section.children %}<a class="subnav-link" href="{{ child.url }}">{{ child.name }} <span class="count">{{ child.items|length }}</span></a>{% endfor %}
+      </nav>
+      {% endif %}
+    </header>
+    {{ m.cards(section.items[:shown]) }}
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

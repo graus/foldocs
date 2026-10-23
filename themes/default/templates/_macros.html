@@ -1,0 +1,52 @@
+{# The author's name as the logo: first name in ink, the rest in the accent. #}
+{% macro name(full) -%}
+{% set parts = full.split(" ", 1) %}{{ parts[0] }}{% if parts|length > 1 %} <span class="surname">{{ parts[1] }}</span>{% endif %}
+{%- endmacro %}
+
+{# One card for every file in a section. On top, its image; or, for a document without one, its
+   opening lines, like a document's thumbnail in Drive. Then its date, unless the section is
+   numbered (its order says enough; an untitled photo's title is its date already), and the
+   subfolder it is in; its title; and its excerpt if the top did not show it. The title is the
+   link; CSS stretches it over the card, so the whole card is clickable while screen readers hear
+   one link. #}
+{% macro hint() -%}
+{# In a theme that sets add_image (a proposal, say), an image-less card says how to fill it. #}
+{% if t.add_image is defined %}<span class="card-hint label">{{ t.add_image }}</span>{% endif %}
+{%- endmacro %}
+
+{# How wide a card is, by the grid's columns: one on a phone, two from 47.5rem, three from 69rem. #}
+{% set CARD_SIZES = "(min-width: 78rem) 23rem, (min-width: 69rem) calc(33.3vw - 3rem), (min-width: 47.5rem) calc(50vw - 3.75rem), (min-width: 40rem) calc(100vw - 6rem), calc(100vw - 2rem)" %}
+{% macro card(item, level=3, lazy=True, priority=False) %}
+{% set ordered = item.category.section.ordered %}
+<article class="card">
+  {% if item.image %}<div class="card-media">{{ picture(item.image, CARD_SIZES, alt=item.caption or item.title or "" if item.kind == "photo" else "", lazy=lazy, priority=priority) }}</div>
+  {% elif item.excerpt %}<div class="card-media card-media--text" aria-hidden="true"><p>{{ item.excerpt }}</p>{{ hint() }}</div>
+  {% else %}<div class="card-media card-media--empty" aria-hidden="true">{% if t.add_image is defined %}{{ hint() }}{% else %}<span class="label">{{ item.category.name }}</span>{% endif %}</div>{% endif %}
+  {% set sub = item.category is not sameas item.category.section %}
+  {% set dated = item.title and not ordered %}
+  {% if dated or sub %}<p class="meta">
+    {%- if dated %}{{ item.date|date }}{% endif %}{% if dated and sub %} · {% endif %}
+    {%- if sub %}{{ item.category.name|lower }}{% endif -%}
+  </p>{% endif %}
+  <h{{ level }} class="card-title"><a href="{{ item.url }}">{{ item.heading }}</a></h{{ level }}>
+  {% if item.excerpt and item.image %}<p class="card-excerpt">{{ item.excerpt }}</p>{% endif %}
+</article>
+{% endmacro %}
+
+{# `eager`: how many cards show without scrolling (the first row on a folder's first page); their
+   images load at once, and the first one first, as it is likely the page's main image. #}
+{% macro cards(items, level=3, eager=0) %}
+<div class="cards">
+  {% for item in items %}{{ card(item, level, lazy=loop.index > eager, priority=loop.first and eager > 0) }}{% endfor %}
+</div>
+{% endmacro %}
+
+{# A folder's subfolders as a row of links, the folder itself first ("All"); the current one is marked. #}
+{% macro filters(folder, current) %}
+<nav class="subnav" aria-label="{{ t.categories }}">
+  <a class="subnav-link" href="{{ folder.url }}"{% if current is sameas folder %} aria-current="page"{% endif %}>{{ t.all }} <span class="count">{{ folder.items|length }}</span></a>
+  {% for child in folder.children %}
+  <a class="subnav-link" href="{{ child.url }}"{% if child is sameas current %} aria-current="page"{% endif %}>{{ child.name|ucfirst }} <span class="count">{{ child.items|length }}</span></a>
+  {% endfor %}
+</nav>
+{% endmacro %}
