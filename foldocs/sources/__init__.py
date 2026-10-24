@@ -12,7 +12,9 @@ reads one folder.
 Adding a service is one module in this folder: a class with the methods of Source below
 (WordFolder has the defaults for one that holds Word files), and a PROVIDER that says how to
 recognize its links, what settings it needs and how to open it; then a line in providers().
-Nothing else names a service. tests/test_sources.py checks every service against this contract.
+It reads every answer with body() and counts every listing with counted(), so the limits a host
+of strangers' folders sets (max_bytes, max_items) hold for it too. Nothing else names a service.
+tests/test_sources.py checks every service against this contract.
 """
 
 from collections.abc import Callable
@@ -46,7 +48,8 @@ def body(resp: requests.Response, limit: int | None = None) -> bytes:
         for chunk in resp.iter_content(1 << 16):
             data += chunk
             if len(data) > limit:
-                raise TooLarge(f"an answer over {limit:,} bytes: too large to publish")
+                size = f"{limit >> 20} MB" if limit >= 1 << 20 else f"{limit:,} bytes"
+                raise TooLarge(f"over {size}: too large to publish")
     return bytes(data)
 
 

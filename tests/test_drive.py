@@ -80,6 +80,23 @@ def test_a_folder_listing_more_than_max_items_is_refused_while_it_is_listed():
     assert drive.http.listings == 2
 
 
+def test_a_doc_too_large_to_zip_is_exported_as_html_under_the_same_limit():
+    refused = b'{"error": {"errors": [{"reason": "exportSizeLimitExceeded"}]}}'
+    replies = [response(403, refused), response(200, b"<p>Hi</p>")]
+
+    class Session:
+        def get(self, url, params=None, **_):
+            return replies.pop(0)
+
+    drive = Drive("api-key", "root")
+    drive.http = Session()
+    assert drive.export_doc(sources.Entry("d", "Doc", sources.DOC, [], "", "")).html == "<p>Hi</p>"
+    replies[:] = [response(403, refused), response(200, b"x" * 11)]
+    drive.max_bytes = 10
+    with pytest.raises(sources.TooLarge):
+        drive.export_doc(sources.Entry("d", "Doc", sources.DOC, [], "", ""))
+
+
 def test_an_unreachable_root_folder_stops_the_sync_instead_of_emptying_the_site():
     class Unshared:  # what Drive answers about a folder that is not shared publicly
         ok, status_code, text = False, 404, "File not found: root"

@@ -119,10 +119,13 @@ class Drive:
         resp = self.http.get(
             f"{API}/{entry.id}/export", params={"mimeType": "application/zip"}, timeout=TIMEOUT, stream=True
         )
-        if not resp.ok and "exportSizeLimitExceeded" in resp.text:
-            resp.close()
-            log.info("Zip export of %s refused (too large), falling back to HTML", entry.id)
-            return DocExport(self._get(f"/{entry.id}/export", mimeType="text/html").decode("utf-8"))
+        if not resp.ok:
+            with resp:  # an error says why at its start
+                said = next(resp.iter_content(1 << 16), b"")
+            if b"exportSizeLimitExceeded" in said:
+                log.info("Zip export of %s refused (too large), falling back to HTML", entry.id)
+                return DocExport(self._get(f"/{entry.id}/export", mimeType="text/html").decode("utf-8"))
+            resp.raise_for_status()
         z = zipfile.ZipFile(io.BytesIO(body(resp, self.max_bytes)))
         html_name = next(n for n in z.namelist() if n.endswith(".html"))
         files = {n: z.read(n) for n in z.namelist() if n != html_name}
