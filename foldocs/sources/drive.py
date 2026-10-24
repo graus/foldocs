@@ -4,6 +4,7 @@ the link can view"), as everything in it is on the site anyway, so an API key is
 no account, no login, no key file."""
 
 import io
+import json
 import logging
 import re
 import zipfile
@@ -11,7 +12,7 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 
-from . import DOC, TIMEOUT, DocExport, Entry, Folder, Provider, body, publishable
+from . import DOC, TIMEOUT, DocExport, Entry, Folder, Provider, body, counted, publishable
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +46,8 @@ def _is_drive(folder_url: str) -> bool:
 
 class Drive:
     kind = "drive"
+    max_items: int | None = None
+    max_bytes: int | None = None
 
     def __init__(self, api_key: str, folder_id: str):
         self.folder_id = folder_id
@@ -54,23 +57,23 @@ class Drive:
         # In a header, not the URL: an error message quotes the URL, and would put the key in logs.
         self.http.headers["X-Goog-Api-Key"] = api_key
 
-    def _get(self, path: str = "", **params) -> requests.Response:
+    def _get(self, path: str = "", **params) -> bytes:
         """A GET on the files API; an error status raises requests.HTTPError."""
-        resp = self.http.get(API + path, params=params, timeout=TIMEOUT)
-        resp.raise_for_status()
-        return resp
+        return body(self.http.get(API + path, params=params, timeout=TIMEOUT, stream=True), self.max_bytes)
 
     def _children(self, folder_id: str) -> list[dict]:
         """A folder's files and folders, page by page."""
         files, token = [], None
         while True:
-            page = self._get(
-                q=f"'{folder_id}' in parents and trashed = false",
-                fields=f"nextPageToken,files({FIELDS})",
-                pageSize=PAGE_SIZE,
-                **({"pageToken": token} if token else {}),
-            ).json()
-            files += page.get("files", [])
+            page = json.loads(
+                self._get(
+                    q=f"'{folder_id}' in parents and trashed = false",
+                    fields=f"nextPageToken,files({FIELDS})",
+                    pageSize=PAGE_SIZE,
+                    **({"pageToken": token} if token else {}),
+                )
+            )
+            files += counted(self, page.get("files", []))
             token = page.get("nextPageToken")
             if not token:
                 return files
@@ -79,6 +82,7 @@ class Drive:
         # Listing a folder that is not shared publicly returns nothing rather than an error,
         # which would read as "everything was deleted". Fail instead, and leave the site as it is.
         self._get(f"/{self.folder_id}", fields="id")
+        self.listed = 0
         return self._walk(self.folder_id, [])
 
     def _walk(self, root_id: str, path: list[str]) -> tuple[list[Entry], list[Folder]]:
@@ -112,18 +116,21 @@ class Drive:
     def export_doc(self, entry: Entry) -> DocExport:
         """A Doc as HTML. The zip export bundles its images; Docs over Google's 10 MB export
         limit fall back to plain HTML, whose images are then fetched by URL."""
-        resp = self.http.get(f"{API}/{entry.id}/export", params={"mimeType": "application/zip"}, timeout=TIMEOUT)
+        resp = self.http.get(
+            f"{API}/{entry.id}/export", params={"mimeType": "application/zip"}, timeout=TIMEOUT, stream=True
+        )
         if not resp.ok and "exportSizeLimitExceeded" in resp.text:
+            resp.close()
             log.info("Zip export of %s refused (too large), falling back to HTML", entry.id)
-            return DocExport(self._get(f"/{entry.id}/export", mimeType="text/html").content.decode("utf-8"))
-        resp.raise_for_status()
-        z = zipfile.ZipFile(io.BytesIO(resp.content))
+            return DocExport(self._get(f"/{entry.id}/export", mimeType="text/html").decode("utf-8"))
+        z = zipfile.ZipFile(io.BytesIO(body(resp, self.max_bytes)))
         html_name = next(n for n in z.namelist() if n.endswith(".html"))
         files = {n: z.read(n) for n in z.namelist() if n != html_name}
         return DocExport(z.read(html_name).decode("utf-8"), files)
 
     def download(self, entry: Entry) -> bytes:
-        return body(self.http.get(f"{API}/{entry.id}", params={"alt": "media"}, timeout=TIMEOUT, stream=True))
+        resp = self.http.get(f"{API}/{entry.id}", params={"alt": "media"}, timeout=TIMEOUT, stream=True)
+        return body(resp, self.max_bytes)
 
     @staticmethod
     def file_url(entry: Entry) -> str:
@@ -135,8 +142,7 @@ class Drive:
     def folder_url(folder: Folder) -> str:
         return FOLDER_URL + folder.id if folder.id else ""
 
-    @staticmethod
-    def fetch(url: str) -> bytes:
+    def fetch(self, url: str) -> bytes:
         """An image a plain-HTML Doc export links to: only from Google's image servers, redirects
         included."""
         for _ in range(REDIRECTS_MAX + 1):
@@ -147,7 +153,7 @@ class Drive:
                 raise ValueError(f"Not fetching {url}: images are only fetched from googleusercontent.com")
             resp = requests.get(url, timeout=TIMEOUT, stream=True, allow_redirects=False)
             if not resp.is_redirect:
-                return body(resp)
+                return body(resp, self.max_bytes)
             url = urljoin(url, resp.headers["Location"])
             resp.close()
         raise ValueError(f"Not fetching {url}: too many redirects")

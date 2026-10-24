@@ -8,7 +8,19 @@ import pytest
 from foldocs import config, sources
 
 LINKS = {"drive": "https://drive.google.com/drive/folders/1AbC-d_E", "nextcloud": "https://cloud.example.org/s/Tok3n"}
-SOURCE = ("kind", "url", "embed", "walk", "download", "export_doc", "fetch", "file_url", "folder_url")
+SOURCE = (
+    "kind",
+    "url",
+    "embed",
+    "max_items",
+    "max_bytes",
+    "walk",
+    "download",
+    "export_doc",
+    "fetch",
+    "file_url",
+    "folder_url",
+)
 
 
 @pytest.mark.parametrize("provider", sources.providers(), ids=lambda p: p.kind)

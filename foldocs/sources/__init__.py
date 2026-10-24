@@ -31,17 +31,31 @@ TIMEOUT = 120  # seconds, for one request to a service
 DOWNLOAD_MAX = 50 << 20  # bytes: a larger file is refused rather than let it take the sync's memory
 
 
-def body(resp: requests.Response) -> bytes:
-    """A streamed response's body, up to DOWNLOAD_MAX; an error status raises requests.HTTPError.
-    The response is closed either way."""
+class TooLarge(ValueError):
+    """A folder or a file past a limit its source was given (max_items, max_bytes)."""
+
+
+def body(resp: requests.Response, limit: int | None = None) -> bytes:
+    """A streamed response's body, up to `limit` bytes (DOWNLOAD_MAX if None), counted as it unpacks:
+    a small compressed answer can't grow into a huge one. An error status raises requests.HTTPError,
+    a longer body TooLarge. The response is closed either way."""
+    limit = DOWNLOAD_MAX if limit is None else limit
     data = bytearray()
     with resp:
         resp.raise_for_status()
-        for chunk in resp.iter_content(1 << 20):
+        for chunk in resp.iter_content(1 << 16):
             data += chunk
-            if len(data) > DOWNLOAD_MAX:
-                raise ValueError(f"a file over {DOWNLOAD_MAX >> 20} MB: too large to publish")
+            if len(data) > limit:
+                raise TooLarge(f"an answer over {limit:,} bytes: too large to publish")
     return bytes(data)
+
+
+def counted(source, children: list) -> list:
+    """A folder's children, counted towards the source's max_items; past it, TooLarge."""
+    source.listed += len(children)
+    if source.max_items is not None and source.listed > source.max_items:
+        raise TooLarge(f"more than {source.max_items} files and folders")
+    return children
 
 
 @dataclass
@@ -92,6 +106,9 @@ class Source(Protocol):
     kind: str  # the Provider's: for a theme page written for one service
     url: str  # the shared folder, to open in a browser
     embed: str  # the folder as a page to show in an iframe, or "" if the service has none
+    # Limits for a folder of a stranger's: a site's own folder has none but DOWNLOAD_MAX.
+    max_items: int | None  # files and folders walk() lists at most; past it, TooLarge
+    max_bytes: int | None  # bytes in one answer from the service (a listing, a file); None: DOWNLOAD_MAX
 
     def walk(self) -> tuple[list[Entry], list[Folder]]:
         """All publishable files under the root, and the folders they are in. Raises, rather

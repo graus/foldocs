@@ -1,6 +1,7 @@
 """Google Drive as a source: what it may fetch, what it does on a folder it can't see, its key."""
 
 import io
+import json
 
 import pytest
 import requests
@@ -25,20 +26,20 @@ def test_images_are_only_fetched_from_google():
         "https://googleusercontent.com.evil.org/x",
     ]:
         with pytest.raises(ValueError):
-            Drive.fetch(url)
+            Drive("api-key", "root").fetch(url)
 
 
 def test_a_redirect_away_from_google_is_not_followed(monkeypatch):
     replies = [response(302, location="https://example.org/x.png")]
     monkeypatch.setattr(drive_module.requests, "get", lambda url, **_: replies.pop(0))
     with pytest.raises(ValueError):
-        Drive.fetch("https://lh3.googleusercontent.com/x")
+        Drive("api-key", "root").fetch("https://lh3.googleusercontent.com/x")
 
 
 def test_a_redirect_within_google_is_followed(monkeypatch):
     replies = [response(302, location="/y"), response(200, b"image")]
     monkeypatch.setattr(drive_module.requests, "get", lambda url, **_: replies.pop(0))
-    assert Drive.fetch("https://lh3.googleusercontent.com/x") == b"image"
+    assert Drive("api-key", "root").fetch("https://lh3.googleusercontent.com/x") == b"image"
 
 
 def test_an_error_status_raises_and_the_response_is_closed():
@@ -55,12 +56,42 @@ def test_a_file_too_large_to_hold_is_refused(monkeypatch):
     assert sources.body(response(content=b"x" * 10)) == b"x" * 10
 
 
+def test_a_source_can_be_given_a_lower_limit():
+    with pytest.raises(sources.TooLarge):
+        sources.body(response(content=b"x" * 11), limit=10)
+
+
+def test_a_folder_listing_more_than_max_items_is_refused_while_it_is_listed():
+    class Session:
+        def __init__(self):
+            self.listings = 0
+
+        def get(self, url, params=None, **_):
+            if "q" not in params:
+                return response(content=b'{"id": "root"}')
+            self.listings += 1
+            files = [{"id": f"f{self.listings}{i}", "name": "Sub", "mimeType": drive_module.FOLDER} for i in range(3)]
+            return response(content=json.dumps({"files": files}).encode())
+
+    drive = Drive("api-key", "root")
+    drive.http, drive.max_items = Session(), 5
+    with pytest.raises(sources.TooLarge):
+        drive.walk()  # every folder holds three more: without the limit, it never ends
+    assert drive.http.listings == 2
+
+
 def test_an_unreachable_root_folder_stops_the_sync_instead_of_emptying_the_site():
     class Unshared:  # what Drive answers about a folder that is not shared publicly
         ok, status_code, text = False, 404, "File not found: root"
 
         def raise_for_status(self):
             raise requests.HTTPError("404 Client Error: Not Found")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            pass
 
     class Session:
         def get(self, url, params=None, **_):

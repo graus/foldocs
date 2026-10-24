@@ -16,7 +16,7 @@ from urllib.parse import quote, unquote, urlencode, urlparse
 import requests
 
 from ..xmlsafe import untrusted_xml
-from . import TIMEOUT, Entry, Folder, Provider, WordFolder, body, publishable
+from . import TIMEOUT, Entry, Folder, Provider, WordFolder, body, counted, publishable
 
 log = logging.getLogger(__name__)
 
@@ -77,6 +77,8 @@ def _in_share(path: str) -> str:
 class Nextcloud(WordFolder):
     kind = "nextcloud"
     embed = ""  # Nextcloud forbids showing its pages in another site's frame
+    max_items: int | None = None
+    max_bytes: int | None = None
 
     def __init__(self, share_url: str, password: str = ""):
         self.base, self.token = parse_share(share_url)
@@ -98,11 +100,11 @@ class Nextcloud(WordFolder):
             data=PROPFIND,
             headers={"Depth": "1", "Content-Type": "application/xml"},
             timeout=TIMEOUT,
+            stream=True,
         )
-        resp.raise_for_status()
         own = _in_share(urlparse(url).path)
         children = []
-        for response in untrusted_xml(resp.content).findall("d:response", NS):
+        for response in untrusted_xml(body(resp, self.max_bytes)).findall("d:response", NS):
             href = urlparse(response.findtext("d:href", "", NS)).path.rstrip("/")
             if _in_share(href) == own:
                 continue  # the folder itself
@@ -117,10 +119,12 @@ class Nextcloud(WordFolder):
                     else:
                         props[tag] = (prop.text or "").strip()
             children.append((unquote(href.rsplit("/", 1)[-1]), props))
-        return children
+        # A server can answer anything: a folder inside itself, without end, or a million files.
+        return counted(self, children)
 
     def walk(self) -> tuple[list[Entry], list[Folder]]:
         # An unknown or expired share answers 401 or 404, which raises: the site stays as it is.
+        self.listed = 0
         return self._walk([])
 
     def _walk(self, path: list[str]) -> tuple[list[Entry], list[Folder]]:
@@ -158,7 +162,8 @@ class Nextcloud(WordFolder):
         return entries, folders
 
     def download(self, entry: Entry) -> bytes:
-        return body(self.http.get(self._path_url(entry.path + [entry.name]), timeout=TIMEOUT, stream=True))
+        resp = self.http.get(self._path_url(entry.path + [entry.name]), timeout=TIMEOUT, stream=True)
+        return body(resp, self.max_bytes)
 
     def _folder_page(self, path: list[str]) -> str:
         return f"{self.url}?{urlencode({'dir': '/' + '/'.join(path)})}"

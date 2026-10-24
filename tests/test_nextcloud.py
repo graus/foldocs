@@ -11,7 +11,7 @@ import pytest
 import requests
 
 from foldocs import cache, config, render, sync
-from foldocs.sources import DOCX
+from foldocs.sources import DOCX, TooLarge
 from foldocs.sources.nextcloud import Nextcloud, parse_share, warned
 
 SHARE = "https://cloud.example.org/s/Tok3n"
@@ -96,7 +96,7 @@ class FakeServer:
         assert path.startswith(DAV)
         return path[len(DAV) :].rstrip("/") or "/"
 
-    def request(self, method, url, data=None, headers=None, timeout=None):
+    def request(self, method, url, data=None, headers=None, timeout=None, stream=False):
         assert method == "PROPFIND" and headers["Depth"] == "1"
         path = self._path(url)
         self.requests.append(path)
@@ -239,4 +239,18 @@ def test_an_answer_with_a_dtd_is_refused_before_it_is_expanded(answer):
     source.http = FakeServer()
     source.http.request = lambda *a, **k: Reply(207, answer)
     with pytest.raises(ET.ParseError):
+        source.walk()
+
+
+def test_a_share_listing_more_than_max_items_is_refused():
+    source = nextcloud()
+    source.max_items = 2
+    with pytest.raises(TooLarge):
+        source.walk()
+
+
+def test_a_listing_over_max_bytes_is_refused():
+    source = nextcloud()
+    source.max_bytes = 100
+    with pytest.raises(TooLarge):
         source.walk()
