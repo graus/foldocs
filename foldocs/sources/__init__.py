@@ -9,8 +9,11 @@ A service (Google Drive, Nextcloud) is where the folder lives; its Provider says
 its links and open them, and gives its short name (kind: "drive", "nextcloud"); the Source it opens
 reads one folder.
 
-Adding a service is one module in this folder: a class with the methods of Source below
-(WordFolder has the defaults for one that holds Word files), and a PROVIDER that says how to
+What a file is (a Doc, a Word file, an image) is not a source's business: the formats are in
+formats/, and a source lists whatever format_for() recognizes, with the format it found. A
+service with a document format of its own (Google Docs) can export it: Exports below.
+
+Adding a service is one module in this folder: a class with the methods of Source below, and a PROVIDER that says how to
 recognize its links, what settings it needs and how to open it; then a line in providers().
 It reads every answer with body() and counts every listing with counted(), so the limits a host
 of strangers' folders sets (max_bytes, max_items) hold for it too. Nothing else names a service.
@@ -19,15 +22,16 @@ tests/test_sources.py checks every service against this contract.
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 import requests
 
-DOC = "application/vnd.google-apps.document"
-DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"  # Word files, read as Docs
-# The images published: photos, screenshots and GIFs. Others (SVG, PSD, camera RAW) are left out.
-IMAGE_TYPES = frozenset(f"image/{t}" for t in ("jpeg", "png", "webp", "gif", "heic", "heif"))
+from .. import formats
 
+# The formats' types, as the sources (and their tests) name them.
+from ..formats import DOC as DOC
+from ..formats import DOCX as DOCX
+from ..formats import IMAGE_TYPES as IMAGE_TYPES
 
 TIMEOUT = 120  # seconds, for one request to a service
 DOWNLOAD_MAX = 50 << 20  # bytes: a larger file is refused rather than let it take the sync's memory
@@ -63,26 +67,40 @@ def counted(source, children: list) -> list:
 
 @dataclass
 class Entry:
-    """A publishable file in the tree: a Doc, a Word file or an image. What every source promises:"""
+    """A publishable file in the tree: a document or an image. What every source promises:"""
 
     id: str  # stable across renames and moves where the service allows; it names a cache file, so
     # letters, digits, "-" and "_" only (hash anything else a server sends)
     name: str
-    mime: str  # DOC, DOCX or one of IMAGE_TYPES: publishable() says which
+    mime: str  # as the service gives it
     path: list[str]  # names of the folders between the root and the file
     created: str  # RFC 3339 in UTC, as "2026-10-23T08:00:00Z" (Drive adds milliseconds): orders the files
     modified: str  # the same; changes whenever the content does (the cache goes by it)
     description: str = ""  # a caption, where the service has them
     taken: str | None = None  # EXIF capture time as "YYYY:MM:DD HH:MM:SS", where the service has it
+    format: str = ""  # its format's name, as the source found it with formats.format_for()
+
+    def __post_init__(self) -> None:
+        if not self.format:  # an entry made without one (in a test, say): found from the type and name
+            found = formats.format_for(self.mime, self.name)
+            if found is None:
+                raise ValueError(f"{self.name}: not a file the site publishes ({self.mime})")
+            self.format = found.name
+
+    @property
+    def reader(self) -> formats.Format:
+        """Its format: what it is, and how it is read."""
+        return formats.named(self.format)
 
     @property
     def kind(self) -> str:
-        return "doc" if self.mime in (DOC, DOCX) else "image"
+        """ "doc" or "image"."""
+        return self.reader.kind
 
     @property
     def stem(self) -> str:
-        """The name without a Word extension, for titles and roles."""
-        return self.name[:-5] if self.mime == DOCX and self.name.lower().endswith(".docx") else self.name
+        """The name without its extension (.docx), for titles and roles."""
+        return self.reader.stem(self.name)
 
 
 @dataclass
@@ -97,10 +115,6 @@ class Folder:
 class DocExport:
     html: str
     files: dict[str, bytes] = field(default_factory=dict)  # images bundled with the export, by src
-
-
-def publishable(mime: str) -> bool:
-    return mime in (DOC, DOCX) or mime in IMAGE_TYPES
 
 
 class Source(Protocol):
@@ -119,15 +133,7 @@ class Source(Protocol):
         ...
 
     def download(self, entry: Entry) -> bytes:
-        """The file itself: an image or a Word file."""
-        ...
-
-    def export_doc(self, entry: Entry) -> DocExport:
-        """A Doc in the service's own format (DOC, not a Word file) as HTML."""
-        ...
-
-    def fetch(self, url: str) -> bytes:
-        """An image an exported Doc links to rather than bundles; only from the service's own hosts."""
+        """The file itself: an image, or a document that is a file (a Word file)."""
         ...
 
     def file_url(self, entry: Entry) -> str:
@@ -139,17 +145,17 @@ class Source(Protocol):
         ...
 
 
-class WordFolder:
-    """What a source whose documents are Word files (not a format of its own) does without."""
-
-    embed = ""
+@runtime_checkable
+class Exports(Protocol):
+    """A source whose service has a document format of its own (Google Docs), which it exports."""
 
     def export_doc(self, entry: Entry) -> DocExport:
-        raise NotImplementedError(f"A {type(self).__name__} folder holds Word files, not Docs to export")
+        """A document in the service's own format as HTML."""
+        ...
 
     def fetch(self, url: str) -> bytes:
-        # A Word file carries its images inside it; it never links to one to fetch.
-        raise ValueError(f"Not fetching {url}: a {type(self).__name__} source only reads files in its folder")
+        """An image an exported document links to rather than bundles; only from the service's own hosts."""
+        ...
 
 
 @dataclass(frozen=True)

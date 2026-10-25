@@ -12,7 +12,8 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 
-from . import DOC, TIMEOUT, DocExport, Entry, Folder, Provider, body, counted, publishable
+from ..formats import described, format_for
+from . import DOC, TIMEOUT, DocExport, Entry, Folder, Provider, body, counted
 
 log = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class Drive:
         return self._walk(self.folder_id, [])
 
     def _walk(self, root_id: str, path: list[str]) -> tuple[list[Entry], list[Folder]]:
-        """All Docs, Word files and images under a folder, and the folders they are in; depth first."""
+        """All documents and images under a folder, and the folders they are in; depth first."""
         entries, folders = [], []
         for f in self._children(root_id):
             if f["mimeType"] == FOLDER:
@@ -94,7 +95,7 @@ class Drive:
                 sub_entries, sub_folders = self._walk(f["id"], path + [f["name"]])
                 entries += sub_entries
                 folders += sub_folders
-            elif publishable(f["mimeType"]):
+            elif found := format_for(f["mimeType"], f["name"]):
                 entries.append(
                     Entry(
                         id=f["id"],
@@ -105,12 +106,12 @@ class Drive:
                         modified=f["modifiedTime"],
                         description=f.get("description", ""),
                         taken=f.get("imageMediaMetadata", {}).get("time"),
+                        format=found.name,
                     )
                 )
             else:
-                log.debug(
-                    "Skipping %s (%s): not a Doc, Word file or image", "/".join(path + [f["name"]]), f["mimeType"]
-                )
+                where = "/".join(path + [f["name"]])
+                log.debug("Skipping %s (%s): not %s", where, f["mimeType"], described())
         return entries, folders
 
     def export_doc(self, entry: Entry) -> DocExport:

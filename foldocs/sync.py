@@ -10,7 +10,6 @@ so the site never shows a document halfway through an edit. Until then the previ
 stays (or, for a new file, nothing yet).
 """
 
-import base64
 import hashlib
 import logging
 import shutil
@@ -23,12 +22,13 @@ import requests
 from . import convert, design, images
 from .cache import Cache, media_name, write_json
 from .config import Settings, role
-from .sources import DOCX, DocExport, Entry, Folder, Source, open_source
+from .formats import Document, Reading
+from .sources import Entry, Folder, Source, open_source
 
 log = logging.getLogger(__name__)
 
 # Bump when processing changes, to redo every file on the next sync.
-VERSION = 15
+VERSION = 16
 
 # Files that couldn't be processed, and how they were then (their modification time): one is
 # tried again once it changes, not every minute. A failure to reach the service is tried again.
@@ -50,13 +50,14 @@ def sync(settings: Settings, source: Source | None = None, settle: int = 0) -> b
     source = source or open_source(settings)
     cache = Cache(settings.cache_dir)
     entries, folders = source.walk()
+    tree = {(*e.path, e.name): e for e in entries}
     previous = cache.manifest() or []
     if not entries and previous:
         # Between deleting everything and uploading it again, the folder is empty for a moment;
         # an empty site is never what that means. To take a site down, stop it.
         log.warning("The folder is empty: keeping the site as it is until files are back")
         return False
-    changed, waiting = _update(settings, cache, source, entries, settle)
+    changed, waiting = _update(settings, cache, source, entries, tree, settle)
     held = _held(cache, entries, previous) if waiting else []
     removed = _prune(settings, cache, {e.id for e in entries} | {e["id"] for e in held})
     moved = _save_tree(cache, [asdict(e) for e in entries] + held, folders, previous)
@@ -67,7 +68,12 @@ def sync(settings: Settings, source: Source | None = None, settle: int = 0) -> b
     return bool(changed or removed or moved)
 
 
-def _update(settings: Settings, cache: Cache, source: Source, entries: list[Entry], settle: int) -> tuple[int, int]:
+Tree = dict[tuple[str, ...], Entry]  # every file in the folder, by its folders' names and its own
+
+
+def _update(
+    settings: Settings, cache: Cache, source: Source, entries: list[Entry], tree: Tree, settle: int
+) -> tuple[int, int]:
     """Process every file that changed and has settled: (how many were, how many still settle)."""
     now = datetime.now(UTC)
     changed = waiting = 0
@@ -89,7 +95,7 @@ def _update(settings: Settings, cache: Cache, source: Source, entries: list[Entr
         media, staging = settings.media_dir / name, settings.media_dir / f"{name}.new"
         shutil.rmtree(staging, ignore_errors=True)
         try:
-            content = _process(source, entry, staging)
+            content = _process(Reading(entry, source, tree), staging)
         except Exception as e:
             # Keep the previous version, images included.
             log.exception("Could not process %s (%s)", entry.name, entry.id)
@@ -156,31 +162,26 @@ def _processing_role(entry: Entry) -> str | None:
     return "design" if role(entry) == "design" else None
 
 
-def _process(source: Source, entry: Entry, out_dir: Path) -> dict:
+def _process(file: Reading, out_dir: Path) -> dict:
     """The file's content for the cache; its images go to out_dir, later served at /media/<name>/."""
+    entry = file.entry
     # Media file names carry a version token, so they can be cached forever.
     token = hashlib.sha1(entry.modified.encode()).hexdigest()[:8]
     base = f"/media/{media_name(entry.id)}/"
     content = {"modified": entry.modified, "version": VERSION}
 
     if entry.kind == "image":
-        info = images.process(source.download(entry), out_dir, f"photo-{token}")
+        info = images.process(file.download(), out_dir, f"photo-{token}")
         return content | {"image": info | {"base": base}}
 
-    if entry.mime == DOCX:
-        export = DocExport(convert.word_html(source.download(entry)))
-    else:
-        export = source.export_doc(entry)
+    assert isinstance(entry.reader, Document)
+    text = entry.reader.read(file)
     count = 0
 
     def image(src: str) -> dict | None:
         nonlocal count
         try:
-            if src.startswith("data:"):  # images inside a Word file
-                data = base64.b64decode(src.split(",", 1)[1])
-            else:
-                data = export.files.get(src) or source.fetch(src)
-            info = images.process(data, out_dir, f"{count + 1}-{token}")
+            info = images.process(text.image(src), out_dir, f"{count + 1}-{token}")
         except Exception as e:  # left out: one image never keeps a document off the site
             if _passing(e):
                 raise  # the whole document is tried again, rather than published without it
@@ -189,7 +190,7 @@ def _process(source: Source, entry: Entry, out_dir: Path) -> dict:
         count += 1
         return info | {"base": base}
 
-    doc = convert.convert(export.html, image, images.attrs)
+    doc = convert.convert(text.html, image, images.attrs, text.title, text.subtitle)
     content["role"] = content_role = _processing_role(entry)
     if content_role == "design":
         # Its settings, and the fonts they name, fetched now: the build works from the cache only.

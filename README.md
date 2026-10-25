@@ -236,7 +236,9 @@ account or key is needed. Pages are Word files (`.docx`). Compared with Drive:
 Foldocs doesn't read OneDrive or Dropbox. Unlike Drive and Nextcloud, neither lets a shared
 folder be read without an account: both need an app registered with the service and a login.
 Adding a service is one module in [`foldocs/sources/`](foldocs/sources/__init__.py), which
-describes what it must do.
+describes what it must do. Adding a kind of document is one module in
+[`foldocs/formats/`](foldocs/formats/__init__.py): it reads the file into clean HTML, and the rest
+is the same for every format.
 
 ## Configuration
 

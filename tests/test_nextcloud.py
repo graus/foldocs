@@ -137,7 +137,7 @@ def test_the_tree_is_listed_with_word_files_and_folders():
     by_name = {e.name: e for e in entries}
     assert set(by_name) == {"A post.docx", "Second.docx"}  # an .odt is not read
     post, second = by_name["A post.docx"], by_name["Second.docx"]
-    assert (post.id, post.path, post.stem, post.kind) == ("11", ["1 Work"], "A post", "doc")
+    assert (post.id, post.path, post.stem, post.kind, post.format) == ("11", ["1 Work"], "A post", "doc", "word")
     assert post.modified == "2026-10-20T08:00:00Z"
     assert post.created == "2026-01-01T00:00:00Z"  # no creation time: the upload time
     assert second.created == "2026-01-02T00:00:00Z"

@@ -3,6 +3,8 @@ from xml.etree import ElementTree
 import pytest
 
 from foldocs import convert
+from foldocs.formats import fonts, gdoc, word
+from foldocs.sources import DocExport
 
 
 def image(src):
@@ -20,8 +22,19 @@ def attrs(info, sizes=None):
     return {"src": info["base"] + "a.webp", "width": 10, "height": 10} | ({"sizes": sizes} if sizes else {})
 
 
+def convert_doc(html):
+    """A Docs export, read as its format does, then made a page."""
+    text = gdoc.clean(DocExport(html), fetch=None)
+    return convert.convert(text.html, image, attrs, text.title, text.subtitle)
+
+
 def convert_body(body):
-    return convert.convert(f"<html><body>{body}</body></html>", image, attrs)
+    return convert_doc(f"<html><body>{body}</body></html>")
+
+
+def convert_word(data):
+    text = word.read(data)
+    return convert.convert(text.html, image, attrs, text.title, text.subtitle)
 
 
 def test_title_subtitle_and_inline_styles():
@@ -88,7 +101,7 @@ def test_a_word_file_takes_the_same_road(tmp_path):
     d.add_paragraph("Geciteerd.", style="Quote")
     path = tmp_path / "t.docx"
     d.save(path)
-    doc = convert.convert(convert.word_html(path.read_bytes()), image, attrs)
+    doc = convert_word(path.read_bytes())
     assert (doc.title, doc.subtitle) == ("Titel", "Ondertitel")
     assert doc.html == '<h2 id="kop">Kop</h2>\n<ul><li>Een **punt**</li></ul>\n<blockquote>Geciteerd.</blockquote>'
 
@@ -102,10 +115,8 @@ def test_only_safe_links_survive():
 
 def test_an_image_keeps_its_share_of_the_page_width():
     page = '<html><body style="max-width: 432pt; padding: 72pt">{}</body></html>'  # 576px of text
-    small = convert.convert(
-        page.format('<p><img src="a.png" style="width: 288.00px; height: 100px"></p>'), image, attrs
-    )
-    full = convert.convert(page.format('<p><img src="a.png" style="width: 566.93px; height: 300px"></p>'), image, attrs)
+    small = convert_doc(page.format('<p><img src="a.png" style="width: 288.00px; height: 100px"></p>'))
+    full = convert_doc(page.format('<p><img src="a.png" style="width: 566.93px; height: 300px"></p>'))
     assert small.html.startswith('<figure style="--width: 50%">')
     assert 'sizes="(min-width: 48rem) 21.2rem, calc((100vw - 2rem) * 0.50)"' in small.html  # half the file, too
     assert full.html.startswith("<figure>") and "sizes" not in full.html  # (nearly) the page's width: the column's
@@ -127,7 +138,7 @@ def test_a_word_tables_header_row_is_kept(tmp_path):
     header.append(header.makeelement("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tblHeader", {}))
     path = tmp_path / "t.docx"
     d.save(path)
-    doc = convert.convert(convert.word_html(path.read_bytes()), image, attrs)
+    doc = convert_word(path.read_bytes())
     assert "Setting" in doc.html and "Accent" in doc.html
 
 
@@ -159,16 +170,16 @@ def test_text_in_a_monospace_font_is_code(tmp_path):
     p.add_run(".")
     path = tmp_path / "t.docx"
     d.save(path)
-    assert convert.convert(convert.word_html(path.read_bytes()), image, attrs).html == (
+    assert convert_word(path.read_bytes()).html == (
         "<p>Put <code>home</code> in <code>site</code>, <strong>then</strong> <em>wait</em>.</p>"
     )
 
 
 def test_only_monospace_fonts_are_code():
     for font in ["Roboto Mono", '"Source Code Pro"', "Courier New", "'Consolas', monospace", "VT323"]:
-        assert convert._monospace(font), font
+        assert fonts.monospace(font), font
     for font in ["Monotype Corsiva", "Monoton", "Montserrat", "Arial", "Cascadia Mono Sans"]:
-        assert not convert._monospace(font), font
+        assert not fonts.monospace(font), font
 
 
 def test_a_word_files_own_fixed_pitch_fonts_are_code(tmp_path):
@@ -191,7 +202,7 @@ def test_a_word_files_own_fixed_pitch_fonts_are_code(tmp_path):
     with zipfile.ZipFile(path, "w") as z:
         for name, data in files.items():
             z.writestr(name, data)
-    html = convert.convert(convert.word_html(path.read_bytes()), image, attrs).html
+    html = convert_word(path.read_bytes()).html
     assert html == "<p>Set <code>FOLDER_URL</code> once.</p>"
 
 
@@ -222,16 +233,16 @@ def test_a_word_file_with_a_dtd_anywhere_is_refused(tmp_path, part):
     """A Word file is untrusted: entities in its XML are refused before they're expanded."""
     data = _word_file_with(tmp_path, part, DTD)
     with pytest.raises(ElementTree.ParseError):
-        convert.word_html(data)
+        word.word_html(data)
     if part == "word/fontTable.xml":
-        assert convert._fixed_pitch_fonts(data) == frozenset()
+        assert word._fixed_pitch_fonts(data) == frozenset()
 
 
 def test_a_word_file_whose_document_has_another_name_is_checked_too(tmp_path):
     """The file itself says which part is the document: its name proves nothing."""
     data = _word_file_with(tmp_path, "word/doc.dat", DTD, document="word/doc.dat")
     with pytest.raises(ElementTree.ParseError):
-        convert.word_html(data)
+        word.word_html(data)
 
 
 def test_an_svg_naming_its_standard_dtd_is_fine_but_one_declaring_entities_is_not(tmp_path):
@@ -240,9 +251,9 @@ def test_an_svg_naming_its_standard_dtd_is_fine_but_one_declaring_entities_is_no
         b'<?xml version="1.0"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" '
         b'"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg xmlns="http://www.w3.org/2000/svg"/>'
     )
-    assert "Text" in convert.word_html(_word_file_with(tmp_path, "word/media/image1.svg", svg))
+    assert "Text" in word.word_html(_word_file_with(tmp_path, "word/media/image1.svg", svg))
     with pytest.raises(ElementTree.ParseError):
-        convert.word_html(_word_file_with(tmp_path, "word/media/image1.svg", DTD))
+        word.word_html(_word_file_with(tmp_path, "word/media/image1.svg", DTD))
 
 
 def test_two_headings_with_the_same_text_get_ids_of_their_own():

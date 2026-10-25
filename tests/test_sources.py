@@ -16,8 +16,6 @@ SOURCE = (
     "max_bytes",
     "walk",
     "download",
-    "export_doc",
-    "fetch",
     "file_url",
     "folder_url",
 )
