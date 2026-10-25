@@ -458,3 +458,23 @@ def test_a_markdown_files_encoding_is_found():
     assert markdown.decode("﻿café".encode()) == "café"
     with pytest.raises(ValueError, match="not a text file"):
         markdown.decode(b"\x89PNG\r\n\x1a\n\x00\x00")
+
+
+def test_a_link_or_style_split_into_runs_is_one_again():
+    doc = convert_body(
+        '<p><a href="https://example.org/a"> </a><a href="https://example.org/a">Research</a>'
+        '<span style="font-weight:700">bo</span><span style="font-weight:700">ld</span></p>'
+    )
+    assert doc.html == '<p><a href="https://example.org/a"> Research</a><strong>bold</strong></p>'
+
+
+def test_a_monospace_font_on_a_heading_a_link_or_punctuation_is_its_look_not_code():
+    mono = 'style="font-family:&quot;Courier New&quot;"'
+    doc = convert_body(
+        f'<p>Intro.</p><h2><span {mono}>Latest</span></h2><p><span {mono}><a href="https://example.org/">More</a></span>'
+        f"<span {mono}> · </span><span>set </span><span {mono}>FOLDER_URL</span></p>"
+    )
+    assert doc.html == (
+        '<p>Intro.</p>\n<h2 id="latest">Latest</h2>\n'
+        '<p><a href="https://example.org/">More</a> · set <code>FOLDER_URL</code></p>'
+    )

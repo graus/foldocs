@@ -11,7 +11,7 @@ import mammoth
 from bs4 import BeautifulSoup
 
 from ..xmlsafe import check_word_file, untrusted_xml
-from . import DocText, Reading, inline_image, take_titles
+from . import DocText, Reading, code_by_font_only, inline_image, take_titles
 from .fonts import monospace
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"  # Word's XML namespace
@@ -68,6 +68,7 @@ def clean(html: str) -> DocText:
     for a in internal:  # a table of contents' entry, without its page number
         if (texts := a.find_all(string=True)) and PAGE_NUMBER.search(texts[-1]):
             texts[-1].replace_with(PAGE_NUMBER.sub("", texts[-1]))
+    code_by_font_only(body)
     title, subtitle = take_titles(body)
     return DocText(body, inline_image, title, subtitle)
 

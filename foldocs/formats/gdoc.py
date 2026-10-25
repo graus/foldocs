@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, urlparse
 from bs4 import BeautifulSoup, Tag
 
 from ..sources import DocExport, Exports
-from . import DocText, Reading, take_titles
+from . import DocText, Reading, code_by_font_only, take_titles
 from .fonts import monospace
 
 LIST_LEVEL = re.compile(r"lst-kix_\w+-(\d+)")
@@ -39,6 +39,7 @@ def clean(export: DocExport, fetch) -> DocText:
             img["data-width"] = str(round(100 * width / page_width))
     for span in body.find_all(["span", "sup", "sub"]):
         _restyle(soup, span)
+    code_by_font_only(body)
     for a in body.find_all("a", href=True):
         if a["href"].startswith(("https://www.google.com/url", "http://www.google.com/url")):
             a["href"] = parse_qs(urlparse(a["href"]).query).get("q", [a["href"]])[0]  # Google's redirect wrapper

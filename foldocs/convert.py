@@ -99,6 +99,22 @@ def _trim(tag: Tag) -> None:
             child.replace_with(NavigableString(strip(str(child))))
 
 
+def _merge(tag: Tag) -> None:
+    """Neighboring inline tags that are the same, as one: a Doc splits its text into runs, so a
+    link or a bold word can come in pieces (and a link's piece can be a space alone)."""
+    for child in list(tag.find_all(True)):
+        while (
+            child.parent is not None
+            and isinstance(after := child.next_sibling, Tag)
+            and after.name == child.name
+            and after.attrs == child.attrs
+            and "id" not in child.attrs
+        ):
+            child.extend(list(after.contents))
+            after.decompose()
+        child.smooth()
+
+
 def _blank(node) -> bool:
     return isinstance(node, NavigableString) and not node.strip()
 
@@ -221,6 +237,7 @@ class _Converter:
         imgs = [img.extract() for img in el.find_all("img")]
         tag = self.new(name)
         self._inline(el, tag)
+        _merge(tag)
         _trim(tag)
         blocks = [tag] if tag.get_text(strip=True) else []
         return blocks + [fig for img in imgs if (fig := self._figure(img))]

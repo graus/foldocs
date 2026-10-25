@@ -243,6 +243,18 @@ def take_titles(body: Tag) -> tuple[str | None, str | None]:
     return found[0], found[1]
 
 
+def code_by_font_only(body: Tag) -> None:
+    """Text a format made code for its monospace font, where the font is only its look: in a
+    heading, as a link's text, or punctuation alone. As text pasted from a web page comes, or a
+    heading in a typewriter font: no file name or setting, which is what code is for."""
+    import re
+
+    for code in body.find_all("code"):
+        heading = code.find_parent(re.compile(r"h[1-6]"))
+        if heading or code.find("a") or code.find_parent("a") or not re.search(r"\w", code.get_text()):
+            code.unwrap()
+
+
 def inline_image(src: str) -> bytes:
     """An image inside the document, as a data: URI; anything else raises ValueError."""
     if not src.startswith("data:") or "," not in src:

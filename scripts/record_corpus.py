@@ -4,8 +4,9 @@ of sample Docs, exported the way the sync exports it (Drive.export_doc).
     GOOGLE_API_KEY=... uv run python scripts/record_corpus.py FOLDER_URL [--replace "A Name=Jan Jansen"]...
 
 Each Doc becomes tests/corpus/gdoc/<its name, as a slug>/ with export.zip (its HTML and images, as
-Drive zips them, the images made small), or export.html for a Doc over Google's 10 MB export limit,
-whose images are links instead. Then write and review their pages:
+Drive zips them, the images made small), or export.html when it bundles no images: a Doc without
+any, or one over Google's 10 MB export limit, whose images are links instead. Then write and review
+their pages:
 
     UPDATE_CORPUS=1 uv run pytest tests/test_corpus.py
 
@@ -66,7 +67,7 @@ def shrink(data: bytes) -> bytes:
 
 def save(export: DocExport, folder: Path, replace: dict[str, str]) -> Path:
     """An export, scrubbed, in a case's folder: export.zip, or export.html for one without images
-    bundled (the fallback for a Doc too large to zip)."""
+    bundled (a Doc with none, or the fallback for one too large to zip)."""
     folder.mkdir(parents=True, exist_ok=True)
     page = scrub(export.html, replace)
     for stale in ("export.zip", "export.html"):
