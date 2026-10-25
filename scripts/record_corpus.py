@@ -18,6 +18,7 @@ an account of the persona's.
 import argparse
 import html
 import io
+import json
 import os
 import re
 import sys
@@ -89,7 +90,7 @@ def record(source, out: Path, replace: dict[str, str]) -> list[str]:
         folder = out / case
         save(source.export_doc(entry), folder, replace)
         if not (about := folder / "case.toml").exists():
-            about.write_text(f"about = {scrub(entry.name, replace)!r}\n".replace("'", '"'))
+            about.write_text(f"about = {json.dumps(scrub(entry.name, replace), ensure_ascii=False)}\n")  # TOML too
         cases.append(case)
     return cases
 

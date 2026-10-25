@@ -3,6 +3,7 @@ reads as the sync reads an export, without the names and addresses the Doc carri
 
 import importlib.util
 import io
+import tomllib
 import zipfile
 from pathlib import Path
 
@@ -65,7 +66,7 @@ def test_every_doc_is_recorded_as_its_export_without_names_or_addresses(tmp_path
     assert "Ann Real" not in export.html and "ann.real" not in export.html
     assert 'href="mailto:jan@example.com">Jan Jansen</a>' in export.html
     assert Image.open(io.BytesIO(export.files["images/image1.png"])).size == (400, 400)
-    assert "Jan Jansen" in (tmp_path / "jan-jansen-s-notes" / "case.toml").read_text()
+    assert tomllib.loads((tmp_path / "jan-jansen-s-notes" / "case.toml").read_text()) == {"about": "Jan Jansen's notes"}
 
     text = gdoc.clean(export, fetch=None)  # as the sync reads it
     doc = convert.convert(text.body, lambda src: {"src": src}, lambda info, sizes=None: info, text.title)
