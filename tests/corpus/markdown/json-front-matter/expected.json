@@ -1,17 +1,11 @@
 {
- "title": null,
- "subtitle": null,
+ "title": "Front matter in JSON",
+ "subtitle": "As Hugo reads it",
  "html": [
-  "<p>{",
-  "\"title\": \"Front matter in JSON\",",
-  "\"description\": \"As Hugo reads it\",",
-  "\"tags\": [\"json\", \"hugo\"],",
-  "\"draft\": false",
-  "}</p>",
   "<p>The text after the front matter.</p>",
   "<h2 id=\"a-heading\">A heading</h2>",
   "<p>More text.</p>"
  ],
- "text": "{ \"title\": \"Front matter in JSON\", \"description\": \"As Hugo reads it\", \"tags\": [\"json\", \"hugo\"], \"draft\": false } The text after the front matter. More text.",
+ "text": "The text after the front matter. More text.",
  "links": []
 }

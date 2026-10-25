@@ -1,15 +1,9 @@
 {
- "title": null,
+ "title": "Notities",
  "subtitle": null,
  "html": [
-  "<p>��#� �N�o�t�i�t�i�e�s�",
-  "�",
-  "�",
-  "�",
-  "�G�e�s�c�h�r�e�v�e�n� �i�n� �K�l�a�d�b�l�o�k�,� �o�p�g�e�s�l�a�g�e�n� �a�l�s� �U�n�i�c�o�d�e�:� �c�a�f���,� �����n�.�",
-  "�",
-  "�</p>"
+  "<p>Geschreven in Kladblok, opgeslagen als Unicode: café, één.</p>"
  ],
- "text": "��#� �N�o�t�i�t�i�e�s� � � � �G�e�s�c�h�r�e�v�e�n� �i�n� �K�l�a�d�b�l�o�k�,� �o�p�g�e�s�l�a�g�e�n� �a�l�s� �U�n�i�c�o�d�e�:� �c�a�f���,� �����n�.� � �",
+ "text": "Geschreven in Kladblok, opgeslagen als Unicode: café, één.",
  "links": []
 }

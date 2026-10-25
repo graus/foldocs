@@ -435,3 +435,26 @@ def test_a_merged_cell_keeps_its_span():
 
 def test_a_line_break_ending_a_paragraph_is_left_out():
     assert convert_body("<p>Text<br><br></p><p><br>More</p>").html == "<p>Text</p>\n<p>More</p>"
+
+
+@pytest.mark.parametrize(
+    "text, meta, rest",
+    [
+        ('+++\ntitle = "Hugo"\ntags = ["a"]\n+++\nBody\n', {"title": "Hugo"}, "Body\n"),
+        ("+++\nnot toml at all\n+++\nBody\n", {}, "+++\nnot toml at all\n+++\nBody\n"),
+        ('{"title": "JSON", "n": 1}\nBody\n', {"title": "JSON"}, "Body\n"),
+        ('{"title": "JSON"} and text\n', {}, '{"title": "JSON"} and text\n'),  # not on a line of its own
+        ("{% raw %}\n", {}, "{% raw %}\n"),
+        ("---\ntitle: Pandoc\n...\nBody\n", {"title": "Pandoc"}, "Body\n"),
+    ],
+)
+def test_markdown_front_matter_in_toml_json_and_pandocs_yaml(text, meta, rest):
+    assert markdown.front_matter(text) == (meta, rest)
+
+
+def test_a_markdown_files_encoding_is_found():
+    assert markdown.decode("café\r\n".encode("utf-16")) == "café\n"
+    assert markdown.decode("café".encode("cp1252")) == "café"
+    assert markdown.decode("﻿café".encode()) == "café"
+    with pytest.raises(ValueError, match="not a text file"):
+        markdown.decode(b"\x89PNG\r\n\x1a\n\x00\x00")

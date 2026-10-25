@@ -1,16 +1,8 @@
 {
- "title": null,
- "subtitle": null,
+ "title": "Een brug in Utrecht",
+ "subtitle": "Een samenvatting van de brug",
  "html": [
-  "<p>+++",
-  "title = \"Een brug in Utrecht\"",
-  "date = 2026-10-01T10:00:00+02:00",
-  "draft = false",
-  "tags = [\"hugo\", \"bruggen\"]",
-  "description = \"Een samenvatting van de brug\"",
-  "+++</p>",
   "<p>De brug is oud en mooi.</p>",
-  "<p>&lt;!--more--&gt;</p>",
   "<p>{{&lt; figure src=\"/images/brug.jpg\" title=\"De brug\" &gt;}}</p>",
   "<p>{{% notice tip %}}",
   "Kom vroeg, dan is het rustig.",
@@ -18,7 +10,7 @@
   "<h2 id=\"geschiedenis-geschiedenis\">Geschiedenis {#geschiedenis}</h2>",
   "<p>Gebouwd in 1843, zie <a href=\"https://example.com/kaart\">de kaart</a> en <a href=\"#\">terug naar boven</a>.</p>"
  ],
- "text": "+++ title = \"Een brug in Utrecht\" date = 2026-10-01T10:00:00+02:00 draft = false tags = [\"hugo\", \"bruggen\"] description = \"Een samenvatting van de brug\" +++ De brug is oud en mooi. <!--more--> {{< figure src=\"/images/brug.jpg\" title=\"De brug\" >}} {{% notice tip %}} Kom vroeg, dan is het rustig. {{% /notice %}} Gebouwd in 1843, zie de kaart en terug naar boven.",
+ "text": "De brug is oud en mooi. {{< figure src=\"/images/brug.jpg\" title=\"De brug\" >}} {{% notice tip %}} Kom vroeg, dan is het rustig. {{% /notice %}} Gebouwd in 1843, zie de kaart en terug naar boven.",
  "links": [
   "https://example.com/kaart",
   "#"

@@ -298,14 +298,17 @@ def _word_words(data: bytes) -> set[str]:
 
 
 def _markdown_words(data: bytes, encoding: str | None) -> set[str]:
-    """The text a Markdown file shows, front matter aside; HTML in it counts, shown as text."""
+    """The text a Markdown file shows, front matter aside; HTML in it counts, shown as text, but
+    for its comments."""
     text = data.decode(encoding or "utf-8-sig", errors="replace").replace("\r\n", "\n")
     _, text = markdown.front_matter(text)
     words = set()
     for token in markdown.MARKDOWN.parse(text):
         for t in [token, *(token.children or [])]:
-            if t.type in ("text", "code_inline", "code_block", "fence", "html_block", "html_inline"):
+            if t.type in ("text", "code_inline", "code_block", "fence"):
                 words |= set(WORD.findall(t.content.casefold()))
+            if t.type in ("html_block", "html_inline"):  # shown as text, but for its comments
+                words |= set(WORD.findall(markdown.COMMENT.sub("", t.content).casefold()))
             if t.type == "image":
                 words |= set(WORD.findall(t.content.casefold()))
     return words
