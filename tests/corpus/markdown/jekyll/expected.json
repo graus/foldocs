@@ -1,0 +1,25 @@
+{
+ "title": "Welcome to Jekyll!",
+ "subtitle": null,
+ "html": [
+  "<ul><li>TOC",
+  "{:toc}</li></ul>",
+  "<p>You'll find this post in your <code>_posts</code> directory. Go ahead and edit it.</p>",
+  "<p>&lt;!--more--&gt;</p>",
+  "<p>{% highlight ruby %}",
+  "def print_hi(name)",
+  "puts \"Hi, #{name}\"",
+  "end",
+  "print_hi('Jan')",
+  "{% endhighlight %}</p>",
+  "<p>{% include note.html content=\"A note from an include\" %}</p>",
+  "<p>Built for {{ site.title }} in {{ page.date | date: \"%Y\" }}.</p>",
+  "<p>A paragraph with a class.",
+  "{: .lead }</p>",
+  "<p>Check out the <a href=\"https://example.com/docs/home\">Jekyll docs</a> for more.</p>"
+ ],
+ "text": "You'll find this post in your _posts directory. Go ahead and edit it. <!--more--> {% highlight ruby %} def print_hi(name) puts \"Hi, #{name}\" end print_hi('Jan') {% endhighlight %} {% include note.html content=\"A note from an include\" %} Built for {{ site.title }} in {{ page.date | date: \"%Y\" }}. A paragraph with a class. {: .lead } Check out the Jekyll docs for more.",
+ "links": [
+  "https://example.com/docs/home"
+ ]
+}

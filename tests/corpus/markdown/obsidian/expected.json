@@ -1,0 +1,25 @@
+{
+ "title": "Weekend in Utrecht",
+ "subtitle": null,
+ "html": [
+  "<p>Zie ook [[Treinreizen]] en [[Hotels|waar we sliepen]], of [[Treinreizen#Kaartjes]].</p>",
+  "<p>![[kanaal.png]]</p>",
+  "<p>![[kanaal.png|300]]</p>",
+  "<blockquote>[!note] Onthouden",
+  "Kaartjes vooraf kopen.</blockquote>",
+  "<blockquote>[!warning]- Ingeklapt",
+  "Verborgen tekst.</blockquote>",
+  "<p>Dit is ==gemarkeerd== en dit is een #tag.</p>",
+  "<p>%%Een opmerking die Obsidian niet toont.%%</p>",
+  "<ul><li>[ ] Inpakken</li><li>[x] Boeken</li></ul>",
+  "<p>Een voetnoot[^1].</p>",
+  "<p>[^1]: De noot zelf.</p>",
+  "<p>$$",
+  "E = mc^2",
+  "$$</p>",
+  "<p>Inline $x^2$ wiskunde.</p>",
+  "<pre><code>TABLE file.ctime FROM #reis</code></pre>"
+ ],
+ "text": "Zie ook [[Treinreizen]] en [[Hotels|waar we sliepen]], of [[Treinreizen#Kaartjes]]. ![[kanaal.png]] ![[kanaal.png|300]] Dit is ==gemarkeerd== en dit is een #tag. %%Een opmerking die Obsidian niet toont.%% Een voetnoot[^1]. [^1]: De noot zelf. $$ E = mc^2 $$ Inline $x^2$ wiskunde.",
+ "links": []
+}

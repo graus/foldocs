@@ -1,0 +1,22 @@
+{
+ "title": null,
+ "subtitle": null,
+ "html": [
+  "<p>&lt;p align=\"center\"&gt;",
+  "&lt;img src=\"logo.png\" width=\"100\" alt=\"The logo\"&gt;",
+  "&lt;/p&gt;</p>",
+  "<p>&lt;h1 align=\"center\"&gt;A README title&lt;/h1&gt;</p>",
+  "<p>Some &lt;span style=\"color:red\"&gt;red&lt;/span&gt; text and a &lt;br&gt; break, &lt;b&gt;bold&lt;/b&gt; and &lt;a href=\"https://example.com\"&gt;a link&lt;/a&gt;.</p>",
+  "<p>&lt;!-- a comment nobody should see --&gt;</p>",
+  "<p>&lt;script&gt;alert(\"not on the page\")&lt;/script&gt;</p>",
+  "<p>&lt;style&gt;body { display: none }&lt;/style&gt;</p>",
+  "<p>&lt;table&gt;",
+  "&lt;tr&gt;&lt;td&gt;An HTML table cell&lt;/td&gt;&lt;/tr&gt;",
+  "&lt;/table&gt;</p>",
+  "<p>&lt;p&gt;A paragraph written in HTML.&lt;/p&gt;</p>",
+  "<p>&lt;iframe src=\"https://example.com/embed\"&gt;&lt;/iframe&gt;</p>",
+  "<p>Text &amp; entities © ©  done.</p>"
+ ],
+ "text": "<p align=\"center\"> <img src=\"logo.png\" width=\"100\" alt=\"The logo\"> </p> <h1 align=\"center\">A README title</h1> Some <span style=\"color:red\">red</span> text and a <br> break, <b>bold</b> and <a href=\"https://example.com\">a link</a>. <!-- a comment nobody should see --> <script>alert(\"not on the page\")</script> <style>body { display: none }</style> <table> <tr><td>An HTML table cell</td></tr> </table> <p>A paragraph written in HTML.</p> <iframe src=\"https://example.com/embed\"></iframe> Text & entities © © done.",
+ "links": []
+}

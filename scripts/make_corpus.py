@@ -558,8 +558,20 @@ MARKDOWN = {
 }
 
 
+# The images the hand-written Markdown cases show, in their folders as the editors keep them.
+IMAGES = {
+    "markdown/nextcloud-text/.attachments.4821/foto.png": (40, 30, (200, 120, 40)),
+    "markdown/obsidian/kanaal.png": (40, 30, (40, 120, 200)),
+    "markdown/raw-html/logo.png": (16, 16, (90, 90, 90)),
+    "markdown/commonmark-corners/picture.png": (16, 16, (150, 40, 90)),
+}
+
+
 def main() -> None:
     only = set(sys.argv[1:])
+    for path, (width, height, color) in IMAGES.items():
+        (CORPUS / path).parent.mkdir(parents=True, exist_ok=True)
+        (CORPUS / path).write_bytes(png(width, height, color))
     for kind, cases, name in (("word", WORD, "input.docx"), ("markdown", MARKDOWN, "input.md")):
         for case, make in cases.items():
             if only and case not in only:

@@ -1,0 +1,3 @@
+about = "As GitHub renders a README: alerts, task lists, footnotes, details, autolinks."
+lost = ["from", "image", "web"]
+why = "An image from the web is never fetched (no third-party requests); its alt text goes with it."

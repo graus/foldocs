@@ -1,0 +1,3 @@
+about = "As Nextcloud Text writes a note: images in a hidden .attachments folder, callouts, task lists."
+lost = ["weg"]
+why = "An image whose file is gone is left out, with its alt text (its file name, as Text writes it)."

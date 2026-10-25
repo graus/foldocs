@@ -1,0 +1,26 @@
+{
+ "title": "Boodschappen en plannen",
+ "subtitle": null,
+ "html": [
+  "<p>Geschreven in Nextcloud Text, door Jan Jansen.</p>",
+  "<h2 id=\"lijst\">Lijst</h2>",
+  "<ul><li>[ ] Brood</li><li>[x] Melk</li><li>[ ] Kaas</li></ul>",
+  "<p>::: info",
+  "Let op: de winkel sluit om zes uur.</p>",
+  "<p>:::</p>",
+  "<p>::: warn",
+  "Neem een tas mee.</p>",
+  "<p>:::</p>",
+  "<div class=\"table-wrap\"><table><thead><tr><th scope=\"col\">Dag</th><th scope=\"col\">Wat</th></tr></thead><tbody><tr><td>Maandag</td><td>Markt</td></tr><tr><td>Dinsdag</td><td></td></tr></tbody></table></div>",
+  "<figure><img alt=\"foto.png\" decoding=\"async\" height=\"8\" loading=\"lazy\" src=\"image-f6cfd6a4\" width=\"8\"/></figure>",
+  "<p>Een link naar <a href=\"https://example.com/plan\">het plan</a> en een ander bestand.</p>",
+  "<ol><li>Eerst</li><li>Dan</li></ol>",
+  "<blockquote>Een citaat over boodschappen.</blockquote>",
+  "<hr/>",
+  "<p><code>code</code> en <strong>vet</strong> en <em>schuin</em> en <s>doorgestreept</s>.</p>"
+ ],
+ "text": "Geschreven in Nextcloud Text, door Jan Jansen. ::: info Let op: de winkel sluit om zes uur. ::: ::: warn Neem een tas mee. ::: Een link naar het plan en een ander bestand. code en vet en schuin en doorgestreept.",
+ "links": [
+  "https://example.com/plan"
+ ]
+}

@@ -1,0 +1,29 @@
+{
+ "title": null,
+ "subtitle": null,
+ "html": [
+  "<hr/>",
+  "<p>title: A Pandoc document",
+  "subtitle: With its YAML closed by dots",
+  "author: Jan Jansen",
+  "...</p>",
+  "<p>Some text, then a definition list:</p>",
+  "<p>Term",
+  ":   Its definition.</p>",
+  "<p>A line block:</p>",
+  "<p>| The first line",
+  "| the second line</p>",
+  "<p>Text with a footnote.^[An inline note.]</p>",
+  "<p>Small caps [like this]{.smallcaps} and a [span]{#with-id}.</p>",
+  "<p>::: {.callout}",
+  "A fenced div.",
+  ":::</p>",
+  "<p><a href=\"#\">Down to the end</a></p>",
+  "<h2 id=\"the-end-the-end\">The end {#the-end}</h2>",
+  "<p>Done.</p>"
+ ],
+ "text": "title: A Pandoc document subtitle: With its YAML closed by dots author: Jan Jansen ... Some text, then a definition list: Term : Its definition. A line block: | The first line | the second line Text with a footnote.^[An inline note.] Small caps [like this]{.smallcaps} and a [span]{#with-id}. ::: {.callout} A fenced div. ::: Down to the end Done.",
+ "links": [
+  "#"
+ ]
+}
