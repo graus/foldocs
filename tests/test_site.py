@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from foldocs import config, contact, render, site, theme
-from foldocs.sources import DOC, DOCX
+from foldocs.formats import DOC, DOCX
 
 THEME = theme.load(Path(__file__).parent.parent / "themes" / "default")
 

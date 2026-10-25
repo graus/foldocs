@@ -1,16 +1,17 @@
 """The kinds of file a site is made from, whichever source they come from: what each one is, how
 to recognize it, and how to read a document of that kind.
 
-There are two kinds. A document (a Google Doc, a Word or a Markdown file) is a page of text; an image is a
-photo. A document's format reads the file into clean HTML (the tags convert.py lists, nothing
-else: no styles, no classes) with its title and subtitle, and says where its images come from.
-That is all that sets one format apart: convert.convert() then makes every document a page the
-same way, so a heading or a table looks the same on the site whatever it was written in.
+There are two kinds. A document (a Google Doc, a Word or a Markdown file) is a page of text; an
+image is a photo. A document's format reads the file into clean HTML (the tags convert.py lists,
+nothing else: no styles, no classes) with its title and subtitle, and says where its images come
+from. That is all that sets one format apart: convert.convert() then makes every document a page
+the same way, so a heading or a table looks the same on the site whatever it was written in.
 
 Adding a format is a Document below, with the types and extensions it is known by, a read() and a
-line in FORMATS; the reading itself goes in a module of its own in this folder (word.py, markdown.py),
-imported only when a file of that format is read. Nothing else names a format: the sources list
-what format_for() recognizes. tests/test_formats.py checks every format against this contract.
+line in FORMATS; the reading itself goes in a module of its own in this folder (gdoc.py, word.py,
+markdown.py), with a read(file), imported only when a file of that format is read. Nothing else
+names a format: the sources list what format_for() recognizes. tests/test_formats.py checks every
+format against this contract.
 """
 
 from __future__ import annotations
@@ -89,7 +90,7 @@ def found(tree: Tree, path: list[str] | tuple[str, ...]) -> list[str] | None:
 class DocText:
     """A document as its format reads it."""
 
-    html: str  # clean HTML, for convert()
+    body: Tag  # its clean HTML, parsed: for convert(), which takes it apart
     image: Callable[[str], bytes]  # an <img> src in it, as the image; raises if it can't be had
     title: str | None = None  # where the document names one (the Title style); else convert looks for it
     subtitle: str | None = None
@@ -99,10 +100,14 @@ class Format(ABC):
     """A kind of file the site is made from."""
 
     name: ClassVar[str]  # short, as an entry records it: "gdoc", "word", "markdown", "image"
-    kind: ClassVar[str]  # "doc" (a page of text) or "image" (a photo)
     label: ClassVar[str]  # as people know it, for messages: "a Word file"
     mimes: ClassVar[frozenset[str]]  # the types a source lists it as
     extensions: ClassVar[tuple[str, ...]] = ()  # lower case; left out of its title, and say it when the type doesn't
+
+    @property
+    def kind(self) -> str:
+        """ "doc" (a page of text) or "image" (a photo)."""
+        return "doc" if isinstance(self, Document) else "image"
 
     def accepts(self, mime: str, name: str) -> bool:
         """Whether a file of this type and name is one."""
@@ -117,8 +122,6 @@ class Format(ABC):
 
 class Document(Format):
     """A page of text."""
-
-    kind = "doc"
 
     @abstractmethod
     def read(self, file: Reading) -> DocText:
@@ -147,7 +150,7 @@ class WordFile(Document):
     def read(self, file: Reading) -> DocText:
         from . import word
 
-        return word.read(file.download())
+        return word.read(file)
 
 
 class MarkdownFile(Document):
@@ -167,7 +170,7 @@ class MarkdownFile(Document):
 class Image(Format):
     """A photo, a screenshot or a GIF: a page of its own, or a portrait."""
 
-    name, kind, label = "image", "image", "an image"
+    name, label = "image", "an image"
     mimes = IMAGE_TYPES
 
 

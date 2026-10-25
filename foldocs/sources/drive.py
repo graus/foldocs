@@ -12,8 +12,8 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 
-from ..formats import described, format_for
-from . import DOC, TIMEOUT, DocExport, Entry, Folder, Provider, body, counted
+from ..formats import DOC, described, format_for
+from . import TIMEOUT, DocExport, Entry, Folder, Provider, body, counted
 
 log = logging.getLogger(__name__)
 

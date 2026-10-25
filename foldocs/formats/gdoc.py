@@ -50,7 +50,7 @@ def clean(export: DocExport, fetch) -> DocText:
             if _indented(p):  # Docs has no quote style; an indented paragraph is how people write one
                 p.name = "blockquote"
         _nest_lists(soup, holder)
-    return DocText(str(body), lambda src: export.files.get(src) or fetch(src), title, subtitle)
+    return DocText(body, lambda src: export.files.get(src) or fetch(src), title, subtitle)
 
 
 def _style(tag: Tag) -> dict[str, str]:

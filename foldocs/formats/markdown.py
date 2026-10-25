@@ -5,6 +5,7 @@ folder beside it), or inside it as data: URIs."""
 
 import re
 
+from bs4 import BeautifulSoup
 from markdown_it import MarkdownIt
 
 from . import DocText, Reading, inline_image
@@ -34,8 +35,8 @@ def read(file: Reading) -> DocText:
             raise ValueError(f"Not an image: {linked.name}")
         return file.download(linked)
 
-    html = f"<html><body>{MARKDOWN.render(text)}</body></html>"
-    return DocText(html, image, meta.get("title"), meta.get("subtitle") or meta.get("description"))
+    body = BeautifulSoup(MARKDOWN.render(text), "html.parser")
+    return DocText(body, image, meta.get("title"), meta.get("subtitle") or meta.get("description"))
 
 
 def front_matter(text: str) -> tuple[dict[str, str], str]:

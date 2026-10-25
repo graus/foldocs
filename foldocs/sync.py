@@ -54,7 +54,7 @@ def sync(settings: Settings, source: Source | None = None, settle: int = 0) -> b
     listed, folders = source.walk()
     # Every file by its path, hidden ones too, for a document that shows one; of two with one name
     # in a folder (Drive allows it), the newest.
-    tree = {(*e.path, e.name): e for e in sorted(listed, key=lambda e: e.modified)}
+    tree = {e.where: e for e in sorted(listed, key=lambda e: e.modified)}
     entries, folders = [e for e in listed if not e.hidden], [f for f in folders if not f.hidden]
     previous = cache.manifest() or []
     if not entries and previous:
@@ -95,7 +95,7 @@ def _update(
         if settle and 0 <= (now - _touched(entry, uses, tree)).total_seconds() < settle:
             waiting += 1
             continue
-        log.info("Processing %s", "/".join(entry.path + [entry.name]))
+        log.info("Processing %s", "/".join(entry.where))
         name = media_name(entry.id)
         media, staging = settings.media_dir / name, settings.media_dir / f"{name}.new"
         shutil.rmtree(staging, ignore_errors=True)
@@ -181,35 +181,34 @@ def _processing_role(entry: Entry) -> str | None:
 
 def _process(file: Reading, out_dir: Path) -> dict:
     """The file's content for the cache; its images go to out_dir, later served at /media/<name>/."""
-    entry = file.entry
-    # Media file names carry a version token, so they can be cached forever: for a photo its own
-    # modification time; for a document's image its content, which can change while the document doesn't.
-    token = hashlib.sha1(entry.modified.encode()).hexdigest()[:8]
+    entry, reader = file.entry, file.entry.reader
     base = f"/media/{media_name(entry.id)}/"
     content = {"modified": entry.modified, "version": VERSION}
-
-    if entry.kind == "image":
+    # Media file names carry a version token, so they can be cached forever.
+    if not isinstance(reader, Document):  # a photo: its token from its own modification time
+        token = hashlib.sha1(entry.modified.encode()).hexdigest()[:8]
         info = images.process(file.download(), out_dir, f"photo-{token}")
         return content | {"image": info | {"base": base}}
 
-    assert isinstance(entry.reader, Document)
-    text = entry.reader.read(file)
-    count = 0
+    text = reader.read(file)
+    done: dict[str, dict | None] = {}  # by src: an image shown twice is read and made once
 
     def image(src: str) -> dict | None:
-        nonlocal count
+        if src in done:
+            return done[src]
         try:
+            # A document's image: its token from its content, which can change while the document doesn't.
             data = text.image(src)
-            info = images.process(data, out_dir, f"{count + 1}-{hashlib.sha1(data).hexdigest()[:8]}")
+            info = images.process(data, out_dir, f"{len(done) + 1}-{hashlib.sha1(data).hexdigest()[:8]}")
+            done[src] = info = info | {"base": base}
         except Exception as e:  # left out: one image never keeps a document off the site
             if _passing(e):
                 raise  # the whole document is tried again, rather than published without it
             log.warning("Could not publish image %s in %s: %s", src[:80], entry.name, e)
-            return None
-        count += 1
-        return info | {"base": base}
+            done[src] = info = None
+        return info
 
-    doc = convert.convert(text.html, image, images.attrs, text.title, text.subtitle)
+    doc = convert.convert(text.body, image, images.attrs, text.title, text.subtitle)
     content["role"] = content_role = _processing_role(entry)
     if content_role == "design":
         # Its settings, and the fonts they name, fetched now: the build works from the cache only.

@@ -48,9 +48,10 @@ class Doc:
 
 
 def convert(
-    html: str, image: ImageHandler, attrs: ImageAttrs, title: str | None = None, subtitle: str | None = None
+    html: str | Tag, image: ImageHandler, attrs: ImageAttrs, title: str | None = None, subtitle: str | None = None
 ) -> Doc:
-    """A document's clean HTML as a page; its title and subtitle, where its format found them."""
+    """A document's clean HTML (or the HTML parsed, which is taken apart) as a page; its title and
+    subtitle, where its format found them."""
     return _Converter(image, attrs, title, subtitle).run(html)
 
 
@@ -109,8 +110,8 @@ class _Converter:
     def new(self, name: str, **attrs) -> Tag:
         return self.soup.new_tag(name, attrs=attrs)
 
-    def run(self, raw: str) -> Doc:
-        parsed = BeautifulSoup(raw, "html.parser")
+    def run(self, raw: str | Tag) -> Doc:
+        parsed = raw if isinstance(raw, Tag) else BeautifulSoup(raw, "html.parser")
         blocks = self._blocks(parsed.body or parsed)
         if self.title is None and blocks and HEADING.fullmatch(blocks[0].name):
             # No paragraph styled "Title": a heading that opens the doc is its title.
@@ -161,16 +162,12 @@ class _Converter:
             if blocks and blocks[0].name.startswith("h"):
                 slug = self._unique(slugify(plain(blocks[0]), "section"))
                 blocks[0]["id"] = slug
-                # Links in the document lead to the heading by its id, or by a bookmark in it (Word's).
-                for source_id in [el.get("id"), *(a["id"] for a in el.find_all("a", id=True))]:
-                    if source_id:
-                        self.heading_ids.setdefault(source_id, slug)
+                if el.get("id"):
+                    self.heading_ids[el["id"]] = slug
             return blocks
         if el.name == "blockquote":
-            if el.find(BLOCKS, recursive=False):  # paragraphs of its own, as a Markdown quote has
-                quote = self._holder(el, "blockquote")
-                return [quote] if quote.contents else []
-            return self._paragraph(el, "blockquote")
+            quote = self._holder(el, "blockquote")
+            return [quote] if quote.contents else []
         if el.name == "hr":
             return [self.new("hr")]
         if el.name == "pre":  # a block of code: its lines as they are
@@ -253,11 +250,11 @@ class _Converter:
             dst["id"] = src["id"]
 
     def _holder(self, el: Tag, name: str) -> Tag:
-        """A tag that holds blocks (a quote, a list item). A paragraph alone in it, or with only
-        lists after it, is its text: how the tag reads anyway."""
+        """A tag that holds blocks: a quote, a list item, a table cell. A paragraph that opens it,
+        with only lists and images after it, is its text: how the tag reads anyway."""
         tag = self.new(name)
         blocks = self._blocks(el)
-        if blocks and blocks[0].name == "p" and all(b.name in ("ul", "ol") for b in blocks[1:]):
+        if blocks and blocks[0].name == "p" and all(b.name in ("ul", "ol", "figure") for b in blocks[1:]):
             tag.extend(list(blocks.pop(0).children))
         tag.extend(blocks)
         return tag
@@ -268,27 +265,10 @@ class _Converter:
         if el.name == "ol" and (start := el.get("start", "1")).isdigit() and start != "1":
             lst["start"] = start  # a list that goes on after something in between
         for item in el.find_all("li", recursive=False):
-            if item.find(BLOCKS - {"ul", "ol"}, recursive=False):  # paragraphs, code: a Markdown item
-                li = self._holder(item, "li")
-                if li.contents:
-                    self._anchor(item, li)
-                    lst.append(li)
-                continue
-            nested = [sub.extract() for sub in item.find_all(["ul", "ol"], recursive=False)]
-            blocks = self._paragraph(item, "li")
-            if nested and not any(b.name == "li" for b in blocks):
-                blocks.insert(0, self.new("li"))  # an item that holds only a list
-            if blocks and blocks[0].name == "li":
-                self._anchor(item, blocks[0])
-            for block in blocks:
-                if block.name == "li":
-                    lst.append(block)
-                elif lst.find_all("li", recursive=False):  # an image in a list item
-                    lst.find_all("li", recursive=False)[-1].append(block)
-            if nested:
-                last = lst.find_all("li", recursive=False)[-1]
-                for sub in nested:
-                    last.append(self._list(sub))
+            li = self._holder(item, "li")
+            if li.contents:
+                self._anchor(item, li)
+                lst.append(li)
         return lst
 
     def _table(self, el: Tag) -> Tag:
@@ -298,13 +278,7 @@ class _Converter:
         for tr in el.select(":scope > thead > tr, :scope > tbody > tr, :scope > tr"):
             row = self.new("tr")
             for td in tr.find_all(["td", "th"], recursive=False):
-                cell = self.new("td")
-                blocks = self._blocks(td)
-                if len(blocks) == 1 and blocks[0].name == "p":
-                    blocks = list(blocks[0].children)
-                for block in blocks:
-                    cell.append(block)
-                row.append(cell)
+                row.append(self._holder(td, "td"))
             rows.append((tr, row))
         table = self.new("table")
         if rows and _header_row(*rows[0]):

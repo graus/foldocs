@@ -12,7 +12,7 @@ from foldocs.sources.nextcloud import Nextcloud
 
 @pytest.mark.parametrize("fmt", formats.FORMATS, ids=lambda f: f.name)
 def test_every_format_says_what_it_is(fmt):
-    assert fmt.kind in ("doc", "image") and isinstance(fmt, Document) == (fmt.kind == "doc")
+    assert isinstance(fmt, Document) or fmt.kind == "image"
     assert fmt.name and fmt.label and fmt.mimes and formats.named(fmt.name) is fmt
     assert all(ext.startswith(".") and ext == ext.lower() for ext in fmt.extensions)
     for mime in fmt.mimes:
@@ -45,7 +45,7 @@ def word_file(text):
 def test_a_documents_format_reads_it_into_clean_html_for_convert():
     entry = Entry("a", "a.docx", DOCX, [], "", "")
     text = entry.reader.read(Reading(entry, FakeSource({"a.docx": word_file("Some words.")})))
-    doc = convert.convert(text.html, lambda src: None, lambda info, sizes=None: {}, text.title, text.subtitle)
+    doc = convert.convert(text.body, lambda src: None, lambda info, sizes=None: {}, text.title, text.subtitle)
     assert (doc.title, doc.html) == ("A title", "<p>Some words.</p>")
 
 

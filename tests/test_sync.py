@@ -358,3 +358,12 @@ def test_a_folder_with_a_slash_in_its_name_is_followed_too(tmp_path):
     assert cache.read_json(s.cache_dir / "content" / "post.json")["uses"] == [[["2024/25", "a.jpg"], ["p", settled]]]
     share.entries = [post, Entry(**{**photo.__dict__, "modified": "2026-02-01T00:00:00Z"})]
     assert sync.sync(s, share) is True
+
+
+def test_an_image_shown_twice_is_read_once(tmp_path):
+    s = settings(tmp_path)
+    post, photo = markdown("post.md", ["writing"]), Entry("p", "a.jpg", "image/jpeg", ["writing", ".a"], "t", "t1")
+    share = FakeShare([post, photo], {"post.md": b"![](.a/a.jpg)\n\n![](.a/a.jpg)", "a.jpg": jpeg()})
+    sync.sync(s, share)
+    assert share.downloads == ["post.md", "a.jpg"]
+    assert cache.read_json(s.cache_dir / "content" / "post-md.json")["html"].count("<img") == 2

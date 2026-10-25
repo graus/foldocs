@@ -28,12 +28,6 @@ import requests
 
 from .. import formats
 
-# The formats' types, as the sources (and their tests) name them.
-from ..formats import DOC as DOC
-from ..formats import DOCX as DOCX
-from ..formats import IMAGE_TYPES as IMAGE_TYPES
-from ..formats import MARKDOWN as MARKDOWN
-
 TIMEOUT = 120  # seconds, for one request to a service
 DOWNLOAD_MAX = 50 << 20  # bytes: a larger file is refused rather than let it take the sync's memory
 
@@ -104,8 +98,13 @@ class Entry:
         return self.reader.stem(self.name)
 
     @property
+    def where(self) -> tuple[str, ...]:
+        """Its place in the folder: the names of the folders it is in, and its own."""
+        return (*self.path, self.name)
+
+    @property
     def hidden(self) -> bool:
-        return hidden([*self.path, self.name])
+        return hidden(self.where)
 
 
 @dataclass
@@ -120,7 +119,7 @@ class Folder:
         return hidden(self.path)
 
 
-def hidden(path: list[str]) -> bool:
+def hidden(path: list[str] | tuple[str, ...]) -> bool:
     """Whether a file or folder is hidden, or in a hidden folder: a name starting with a dot. It is
     not on the site, but there for a document that shows it, as Nextcloud keeps a Markdown file's
     images."""

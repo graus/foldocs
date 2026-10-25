@@ -1,5 +1,6 @@
 """A Word file (.docx), read with mammoth, whose HTML is close to clean already: Word's styles map
-to the tags they mean, and a run in a monospace font is code, as in a Docs export."""
+to the tags they mean, a run in a monospace font is code, as in a Docs export, and a bookmark on a
+heading (where a table of contents leads) is the heading's id."""
 
 import io
 import zipfile
@@ -9,7 +10,7 @@ import mammoth
 from bs4 import BeautifulSoup
 
 from ..xmlsafe import check_word_file, untrusted_xml
-from . import DocText, inline_image, take_titles
+from . import DocText, Reading, inline_image, take_titles
 from .fonts import monospace
 
 W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"  # Word's XML namespace
@@ -25,11 +26,25 @@ r[style-name='HTML Code'] => code
 """
 
 
-def read(data: bytes) -> DocText:
+def read(file: Reading) -> DocText:
     """A Word file; its images come along as data: URIs."""
-    body = BeautifulSoup(word_html(data), "html.parser").body
+    return clean(word_html(file.download()))
+
+
+def clean(html: str) -> DocText:
+    """mammoth's HTML as clean HTML."""
+    body = BeautifulSoup(html, "html.parser")
+    for heading in body.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
+        bookmarks = []
+        for a in heading.find_all("a", id=True, href=False):
+            bookmarks.append(a["id"])
+            a.unwrap()  # it marks a place; any text in it stays
+        if bookmarks and not heading.get("id"):
+            heading["id"] = bookmarks.pop(0)
+        for a in body.find_all("a", href=[f"#{b}" for b in bookmarks]):  # its other bookmarks
+            a["href"] = f"#{heading.get('id', '')}"
     title, subtitle = take_titles(body)
-    return DocText(str(body), inline_image, title, subtitle)
+    return DocText(body, inline_image, title, subtitle)
 
 
 def word_html(data: bytes) -> str:
@@ -44,7 +59,7 @@ def word_html(data: bytes) -> str:
     result = mammoth.convert_to_html(
         io.BytesIO(data), style_map=STYLES, external_file_access=False, transform_document=code_runs
     )
-    return f"<html><body>{result.value}</body></html>"
+    return result.value
 
 
 def _fixed_pitch_fonts(data: bytes) -> frozenset[str]:

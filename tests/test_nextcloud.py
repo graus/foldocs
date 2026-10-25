@@ -12,7 +12,8 @@ import requests
 from PIL import Image
 
 from foldocs import cache, config, render, sync
-from foldocs.sources import DOCX, TooLarge
+from foldocs.formats import DOCX
+from foldocs.sources import TooLarge
 from foldocs.sources.nextcloud import Nextcloud, parse_share, warned
 
 SHARE = "https://cloud.example.org/s/Tok3n"

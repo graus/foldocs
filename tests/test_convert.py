@@ -25,7 +25,7 @@ def attrs(info, sizes=None):
 def convert_doc(html):
     """A Docs export, read as its format does, then made a page."""
     text = gdoc.clean(DocExport(html), fetch=None)
-    return convert.convert(text.html, image, attrs, text.title, text.subtitle)
+    return convert.convert(text.body, image, attrs, text.title, text.subtitle)
 
 
 def convert_body(body):
@@ -33,8 +33,8 @@ def convert_body(body):
 
 
 def convert_word(data):
-    text = word.read(data)
-    return convert.convert(text.html, image, attrs, text.title, text.subtitle)
+    text = word.clean(word.word_html(data))
+    return convert.convert(text.body, image, attrs, text.title, text.subtitle)
 
 
 def test_title_subtitle_and_inline_styles():
@@ -296,7 +296,7 @@ class OneFile:
 def convert_markdown(text):
     entry = Entry("m", "m.md", "text/markdown", [], "", "")
     read = markdown.read(Reading(entry, OneFile(text.encode())))
-    return convert.convert(read.html, image, attrs, read.title, read.subtitle)
+    return convert.convert(read.body, image, attrs, read.title, read.subtitle)
 
 
 def test_a_markdown_file_takes_the_same_road_as_a_doc():
@@ -386,9 +386,12 @@ def test_a_numbered_doc_list_goes_on_after_an_image():
 
 def test_a_word_table_of_contents_leads_to_its_headings():
     """mammoth writes Word's bookmark inside the heading it marks."""
-    doc = convert.convert(
-        '<p><a href="#_Toc1">Intro</a></p><h1><a id="_Toc1"></a>Intro</h1><p>Text.</p>', image, attrs, "Title"
+    text = word.clean(
+        '<p><a href="#_Toc1">Intro</a></p><h1><a id="_Toc1"></a><a id="_Ref2"></a>Intro</h1>'
+        '<p><a href="#_Ref2">Up</a></p>'
     )
+    doc = convert.convert(text.body, image, attrs, "Title")
+    assert '<a href="#intro">Up</a>' in doc.html
     assert '<a href="#intro">Intro</a>' in doc.html and 'id="intro"' in doc.html
 
 
@@ -413,3 +416,8 @@ def test_markdown_front_matter_values(front, expected):
     meta, text = markdown.front_matter(f"---\n{front}\n---\nBody\n")
     assert text == "Body\n"
     assert {key: meta.get(key) for key in expected} == expected
+
+
+def test_a_list_item_of_an_image_alone_keeps_it():
+    doc = convert_body('<ul><li>one</li><li><img src="a.png"></li></ul>')
+    assert doc.html.startswith("<ul><li>one</li><li><figure>") and len(doc.images) == 1
