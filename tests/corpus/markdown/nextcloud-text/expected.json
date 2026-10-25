@@ -13,7 +13,7 @@
   "<p>:::</p>",
   "<div class=\"table-wrap\"><table><thead><tr><th scope=\"col\">Dag</th><th scope=\"col\">Wat</th></tr></thead><tbody><tr><td>Maandag</td><td>Markt</td></tr><tr><td>Dinsdag</td><td></td></tr></tbody></table></div>",
   "<figure><img alt=\"foto.png\" decoding=\"async\" height=\"8\" loading=\"lazy\" src=\"image-f6cfd6a4\" width=\"8\"/></figure>",
-  "<p>Een link naar <a href=\"https://example.com/plan\">het plan</a> en <a href=\"folder:/Notities.md\">een ander bestand</a>.</p>",
+  "<p>Een link naar <a href=\"https://example.com/plan\">het plan</a> en een ander bestand.</p>",
   "<ol><li>Eerst</li><li>Dan</li></ol>",
   "<blockquote>Een citaat over boodschappen.</blockquote>",
   "<hr/>",
@@ -21,7 +21,6 @@
  ],
  "text": "Geschreven in Nextcloud Text, door Jan Jansen. ::: info Let op: de winkel sluit om zes uur. ::: ::: warn Neem een tas mee. ::: Een link naar het plan en een ander bestand. code en vet en schuin en doorgestreept.",
  "links": [
-  "https://example.com/plan",
-  "folder:/Notities.md"
+  "https://example.com/plan"
  ]
 }

@@ -127,15 +127,3 @@ def test_the_api_key_is_sent_in_a_header_never_in_the_url():
     drive = Drive("secret-key", "root")
     assert drive.http.headers["X-Goog-Api-Key"] == "secret-key"
     assert not drive.http.params
-
-
-def test_a_link_to_a_doc_or_file_names_its_id():
-    for url, found in [
-        ("https://docs.google.com/document/d/1AbC_d-E/edit?usp=sharing", "1AbC_d-E"),
-        ("https://docs.google.com/spreadsheets/d/S1/edit#gid=0", "S1"),
-        ("https://drive.google.com/file/d/XyZ/view", "XyZ"),
-        ("https://drive.google.com/open?id=Q1", "Q1"),
-        ("https://example.com/document/d/not-google", None),
-        ("https://drive.google.com/drive/folders/F1", None),
-    ]:
-        assert Drive.file_id(url) == found, url

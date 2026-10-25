@@ -1,5 +1,0 @@
-# Day one
-
-## Morning
-
-Coffee.

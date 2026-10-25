@@ -160,8 +160,7 @@ def page(case: Case, data: bytes | None = None) -> convert.Doc:
             source.export_doc = lambda _: DocExport(data.decode()) if data[:2] != b"PK" else unzip(data)
         else:
             source.download = lambda e, real=source.download: data if e is entry else real(e)
-    reading = Reading(entry, source, source.tree())
-    text = entry.reader.read(reading)
+    text = entry.reader.read(Reading(entry, source, source.tree()))
 
     def image(src):
         try:
@@ -169,7 +168,7 @@ def page(case: Case, data: bytes | None = None) -> convert.Doc:
         except Exception:  # as the sync leaves it out
             return None
 
-    return convert.convert(text.body, image, image_attrs, text.title, text.subtitle, reading.page_link)
+    return convert.convert(text.body, image, image_attrs, text.title, text.subtitle)
 
 
 @functools.cache
@@ -491,23 +490,3 @@ def test_the_whole_corpus_syncs_and_builds_in_every_theme(tmp_path):
         for item in found.items + found.pages:
             page_file = built.public_dir / item.url.strip("/") / "index.html"
             assert page_file.exists(), f"{theme}: no page for {item.url}"
-            assert 'href="folder:' not in page_file.read_text(), f"{theme}: a link left unresolved on {item.url}"
-        _check_links_between_documents(found, built.public_dir)
-
-
-def _check_links_between_documents(found: site.Site, public: Path) -> None:
-    """The links in markdown/links-between-documents lead to their pages; those to files with no
-    page are their text."""
-    by_title = {item.title: item for item in found.items}
-    page = (public / by_title["Links between documents"].url.strip("/") / "index.html").read_text()
-    trip = next(c for c in found.categories if c.name == "The trip")
-    photo = next(i for i in found.items if i.kind == "photo" and i.category is trip)
-    for text, url in [
-        ("the plan", by_title["The plan"].url),
-        ("first morning", by_title["Day one"].url + "#morning"),
-        ("the whole trip", trip.url),
-        ("a photo", photo.url),
-    ]:
-        assert f'<a href="{url}">{text}</a>' in page, text
-    for text in ("a file that is gone", "a hidden draft", "a path out of the folder"):
-        assert f"{text}</a>" not in page and text in page, text

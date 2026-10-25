@@ -208,7 +208,7 @@ def _process(file: Reading, out_dir: Path) -> dict:
             done[src] = info = None
         return info
 
-    doc = convert.convert(text.body, image, images.attrs, text.title, text.subtitle, file.page_link)
+    doc = convert.convert(text.body, image, images.attrs, text.title, text.subtitle)
     content["role"] = content_role = _processing_role(entry)
     if content_role == "design":
         # Its settings, and the fonts they name, fetched now: the build works from the cache only.

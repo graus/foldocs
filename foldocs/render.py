@@ -13,10 +13,9 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
-from urllib.parse import parse_qs, unquote, urlparse, urlsplit
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
-from bs4 import BeautifulSoup
 from jinja2 import Environment, FileSystemLoader, StrictUndefined, select_autoescape
 from markupsafe import Markup, escape
 
@@ -113,16 +112,15 @@ def _theme_for(settings: Settings, source: Source) -> Theme:
 
 def _localize_links(site: Site, settings: Settings, theme: Theme) -> None:
     """Links to the site itself, written in full (a Google Doc keeps no other kind), made local,
-    so they stay on whichever variant they are read; and links to other files in the folder, to
-    their pages."""
+    so they stay on whichever variant they are read."""
     own = settings.original_url or settings.site_url
     pages = [*site.pages, *site.items]
     here = {"/", "/feed.xml", "/sitemap.xml"} | {c.url for c in site.categories} | {p.url for p in pages}
     here |= {extra.url for extra in theme.extras.values()}
     for item in pages:
-        item.html = local_links(folder_links(item.html, site.destinations), own, here)
+        item.html = local_links(item.html, own, here)
     for cat in site.categories:
-        cat.intro = local_links(folder_links(cat.intro, site.destinations), own, here)
+        cat.intro = local_links(cat.intro, own, here)
 
 
 ICONS = ("favicon.svg", "apple-touch-icon.png")
@@ -241,26 +239,6 @@ def _environment(
         ),
     }
     return env
-
-
-def folder_links(html: str, destinations: dict) -> str:
-    """A page's links to other files and folders in the folder (folder: addresses, see
-    formats.Reading.page_link) as links to their pages: by the file's ID, else by its path. A link
-    to a file with no page (a hidden one, or one gone) is its text alone."""
-    if 'href="folder:' not in html:
-        return html
-    soup = BeautifulSoup(html, "html.parser")
-    for a in soup.find_all("a", href=re.compile("^folder:")):
-        parts = urlsplit(a["href"])
-        path = tuple(unquote(name) for name in parts.path.strip("/").split("/") if name)
-        url = destinations.get(parse_qs(parts.query).get("id", [""])[0]) or (destinations.get(path) if path else None)
-        if url:
-            a["href"] = url + (f"#{parts.fragment}" if parts.fragment else "")
-        elif a.get("id"):
-            del a["href"]
-        else:
-            a.unwrap()
-    return str(soup)
 
 
 def local_links(html: str, site_url: str, pages: set[str] | None = None) -> str:

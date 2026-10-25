@@ -24,13 +24,9 @@ from .text import plain, slugify
 ImageHandler = Callable[[str], dict | None]
 # Renders a processed image to <img> attributes (see images.attrs).
 ImageAttrs = Callable[..., dict]  # (info, sizes=...) -> the <img>'s attributes
-# Given a link's address, returns it as a link to another file in the folder (a folder: address,
-# see formats.Reading.page_link), or None for a link to anything else.
-LinkHandler = Callable[[str], str | None]
 
-# Links that may reach the site: web, mail and phone links, relative or in-page ones, and links to
-# another file in the folder, which the build makes that page's address.
-SAFE_LINK = re.compile(r"^((?i:https?:|mailto:|tel:)|#|/|folder:/)")  # folder: as page_link writes it
+# Links that may reach the site: web, mail and phone links, and relative or in-page ones.
+SAFE_LINK = re.compile(r"^(https?:|mailto:|tel:|#|/)", re.IGNORECASE)
 THEME_IDS = ("main", "page-h", "topics-h", "archive-title", "cta-title")  # ids the themes use on a page
 INLINE = {"strong", "em", "code", "s", "sup", "sub"}
 SAME_AS = {"b": "strong", "i": "em", "del": "s", "strike": "s"}  # the tags HTML has for the same thing
@@ -54,16 +50,11 @@ class Doc:
 
 
 def convert(
-    html: str | Tag,
-    image: ImageHandler,
-    attrs: ImageAttrs,
-    title: str | None = None,
-    subtitle: str | None = None,
-    link: LinkHandler | None = None,
+    html: str | Tag, image: ImageHandler, attrs: ImageAttrs, title: str | None = None, subtitle: str | None = None
 ) -> Doc:
     """A document's clean HTML (or the HTML parsed, which is taken apart) as a page; its title and
     subtitle, where its format found them."""
-    return _Converter(image, attrs, title, subtitle, link).run(html)
+    return _Converter(image, attrs, title, subtitle).run(html)
 
 
 def _header_row(source: Tag, row: Tag) -> bool:
@@ -133,10 +124,9 @@ def _first(blocks: list[Tag]) -> dict:
 
 
 class _Converter:
-    def __init__(
-        self, image: ImageHandler, attrs: ImageAttrs, title: str | None, subtitle: str | None, link: LinkHandler | None
-    ):
-        self.image, self.attrs, self.link = image, attrs, link
+    def __init__(self, image: ImageHandler, attrs: ImageAttrs, title: str | None, subtitle: str | None):
+        self.image = image
+        self.attrs = attrs
         self.soup = BeautifulSoup("", "html.parser")  # factory for the new tags
         self.title, self.subtitle = title, subtitle
         self.images: list[dict] = []
@@ -294,7 +284,6 @@ class _Converter:
             else:
                 self._inline(a, dst)
             return
-        href = (self.link and self.link(href.strip())) or href
         if not SAFE_LINK.match(href.strip()):  # also drops javascript: and data: links; the text stays
             self._inline(a, dst)
             return

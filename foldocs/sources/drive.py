@@ -8,7 +8,7 @@ import json
 import logging
 import re
 import zipfile
-from urllib.parse import parse_qs, urljoin, urlparse
+from urllib.parse import urljoin, urlparse
 
 import requests
 
@@ -26,8 +26,6 @@ REDIRECTS_MAX = 3  # for an image a Doc links to
 FOLDER_URL = "https://drive.google.com/drive/folders/"
 FOLDER = "application/vnd.google-apps.folder"
 HOSTS = ("drive.google.com", "docs.google.com")
-# A file's path on those hosts: a Doc, Sheet or Slides file, or any other file
-FILE_PATH = re.compile(r"/(?:document|spreadsheets|presentation|file)/d/([\w-]+)")
 
 
 def folder_id(folder_url: str) -> str:
@@ -152,19 +150,6 @@ class Drive:
     @staticmethod
     def folder_url(folder: Folder) -> str:
         return FOLDER_URL + folder.id if folder.id else ""
-
-    @staticmethod
-    def file_id(url: str) -> str | None:
-        """The ID in a link to a file on Drive or in Google Docs, as Docs writes a link to another
-        Doc (docs.google.com/document/d/<ID>/edit) or Drive's Share dialog gives one."""
-        parts = urlparse(url)
-        if parts.scheme not in ("http", "https") or parts.hostname not in HOSTS:
-            return None
-        if m := FILE_PATH.match(parts.path):
-            return m[1]
-        if parts.path == "/open":
-            return next(iter(parse_qs(parts.query).get("id", [])), None)
-        return None
 
     def fetch(self, url: str) -> bytes:
         """An image a plain-HTML Doc export links to: only from Google's image servers, redirects
