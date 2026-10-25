@@ -137,7 +137,7 @@ def _nested(soup: BeautifulSoup, elements: list[Tag]) -> list[Tag]:
         else:
             if stack and stack[-1][0] == level:  # same level, other list type
                 stack.pop()
-            lst = soup.new_tag(el.name)
+            lst = soup.new_tag(el.name, attrs={"start": el["start"]} if el.get("start") else {})
             if stack:
                 parent = stack[-1][1]
                 items = parent.find_all("li", recursive=False)

@@ -3,7 +3,8 @@ format reads it into.
 
 Clean HTML is blocks (p, h1-h6, ul and ol with li, table, blockquote, pre with code, hr, and div
 only to group them) holding text in a few inline tags (a, strong, em, code, s, sup, sub, br) and
-images (img, with data-width for a share of the text's width). A table cell holds blocks or text.
+images (img, with data-width for a share of the text's width). Text between blocks, in a list
+item or a table cell say, is a paragraph of its own.
 Here the page is rebuilt from those tags and safe links alone, so no markup or styling a file
 carries reaches the site; the headings move a level down below the page's title and get ids of
 their own, and each image becomes a figure.
@@ -30,7 +31,8 @@ INLINE = {"strong", "em", "code", "s", "sup", "sub"}
 SAME_AS = {"b": "strong", "i": "em", "del": "s", "strike": "s"}  # the tags HTML has for the same thing
 HEADING = re.compile(r"h[1-6]")
 ANCHOR_ID = re.compile(r"[\w.-]+")  # an id a link in the document may point at
-BLOCKS = frozenset({"p", "ul", "ol", "table", "div", "blockquote", "pre", "hr", "h1", "h2", "h3", "h4", "h5", "h6"})
+GROUPS = frozenset({"div", "section", "article", "main", "header", "footer", "aside"})  # tags that only group blocks
+BLOCKS = GROUPS | {"p", "ul", "ol", "table", "blockquote", "pre", "hr", "h1", "h2", "h3", "h4", "h5", "h6"}
 
 
 @dataclass
@@ -109,11 +111,11 @@ class _Converter:
 
     def run(self, raw: str) -> Doc:
         parsed = BeautifulSoup(raw, "html.parser")
-        blocks = self._blocks((parsed.body or parsed).find_all(recursive=False))
+        blocks = self._blocks(parsed.body or parsed)
         if self.title is None and blocks and HEADING.fullmatch(blocks[0].name):
             # No paragraph styled "Title": a heading that opens the doc is its title.
             self.title = plain(blocks.pop(0))
-        headings = [b for b in blocks if HEADING.fullmatch(b.name)]
+        headings = [h for b in blocks for h in ([b] if HEADING.fullmatch(b.name) else b.find_all(HEADING))]
         if headings and (shift := min(int(h.name[1]) for h in headings) - 2) > 0:
             for h in headings:  # the highest heading left becomes an <h2>
                 h.name = f"h{int(h.name[1]) - shift}"
@@ -132,8 +134,25 @@ class _Converter:
             first=_first(blocks),
         )
 
-    def _blocks(self, elements: list[Tag]) -> list[Tag]:
-        return [block for el in elements for block in self._block(el)]
+    def _blocks(self, holder: Tag) -> list[Tag]:
+        """The blocks a tag holds. Text and inline tags between them (as in a tight Markdown list
+        item, or a table cell) are a paragraph of their own."""
+        out, loose = [], []
+        for child in list(holder.children):
+            if isinstance(child, Tag) and child.name in BLOCKS:
+                out += self._loose(loose) + self._block(child)
+                loose = []
+            elif not isinstance(child, Comment):
+                loose.append(child)
+        return out + self._loose(loose)
+
+    def _loose(self, nodes: list) -> list[Tag]:
+        """Text and inline tags as a paragraph, if there is anything to read in them."""
+        if not any(isinstance(node, Tag) or node.strip() for node in nodes):
+            return []
+        p = self.new("p")
+        p.extend([node.extract() for node in nodes])
+        return self._paragraph(p, "p")
 
     def _block(self, el: Tag) -> list[Tag]:
         if HEADING.fullmatch(el.name):
@@ -142,8 +161,10 @@ class _Converter:
             if blocks and blocks[0].name.startswith("h"):
                 slug = self._unique(slugify(plain(blocks[0]), "section"))
                 blocks[0]["id"] = slug
-                if el.get("id"):
-                    self.heading_ids[el["id"]] = slug
+                # Links in the document lead to the heading by its id, or by a bookmark in it (Word's).
+                for source_id in [el.get("id"), *(a["id"] for a in el.find_all("a", id=True))]:
+                    if source_id:
+                        self.heading_ids.setdefault(source_id, slug)
             return blocks
         if el.name == "blockquote":
             if el.find(BLOCKS, recursive=False):  # paragraphs of its own, as a Markdown quote has
@@ -161,8 +182,8 @@ class _Converter:
             return [self._list(el)]
         if el.name == "table":
             return [self._table(el)]
-        if el.name == "div":
-            return self._blocks(el.find_all(recursive=False))
+        if el.name in GROUPS:
+            return self._blocks(el)
         return self._paragraph(el, "p")
 
     def _unique(self, base: str) -> str:
@@ -235,7 +256,7 @@ class _Converter:
         """A tag that holds blocks (a quote, a list item). A paragraph alone in it, or with only
         lists after it, is its text: how the tag reads anyway."""
         tag = self.new(name)
-        blocks = self._blocks(el.find_all(recursive=False))
+        blocks = self._blocks(el)
         if blocks and blocks[0].name == "p" and all(b.name in ("ul", "ol") for b in blocks[1:]):
             tag.extend(list(blocks.pop(0).children))
         tag.extend(blocks)
@@ -278,10 +299,7 @@ class _Converter:
             row = self.new("tr")
             for td in tr.find_all(["td", "th"], recursive=False):
                 cell = self.new("td")
-                if td.find(BLOCKS, recursive=False):
-                    blocks = self._blocks(td.find_all(recursive=False))
-                else:  # text right in the cell
-                    blocks = self._paragraph(td, "p")
+                blocks = self._blocks(td)
                 if len(blocks) == 1 and blocks[0].name == "p":
                     blocks = list(blocks[0].children)
                 for block in blocks:

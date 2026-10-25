@@ -365,3 +365,33 @@ def test_markdown_quotes_and_list_items_keep_their_paragraphs_and_code():
         "<blockquote>alone</blockquote>\n"
         "<ul><li><p>Step:</p><pre><code>x\ny</code></pre></li><li>Next<ul><li>sub</li></ul></li></ul>"
     )
+
+
+def test_text_beside_a_block_in_a_list_item_is_kept():
+    """A tight Markdown list writes an item's text loose, before its code or quote."""
+    doc = convert_markdown("- item one\n  ```\n  code\n  ```\n- item\n  > quoted\n")
+    assert doc.html == (
+        "<ul><li><p>item one</p><pre><code>code</code></pre></li>"
+        "<li><p>item</p><blockquote>quoted</blockquote></li></ul>"
+    )
+
+
+def test_a_numbered_doc_list_goes_on_after_an_image():
+    doc = convert_body(
+        '<ol class="lst-kix_a-0 start" start="1"><li>one</li></ol><p>between</p>'
+        '<ol class="lst-kix_a-0" start="2"><li>two</li></ol>'
+    )
+    assert doc.html == '<ol><li>one</li></ol>\n<p>between</p>\n<ol start="2"><li>two</li></ol>'
+
+
+def test_a_word_table_of_contents_leads_to_its_headings():
+    """mammoth writes Word's bookmark inside the heading it marks."""
+    doc = convert.convert(
+        '<p><a href="#_Toc1">Intro</a></p><h1><a id="_Toc1"></a>Intro</h1><p>Text.</p>', image, attrs, "Title"
+    )
+    assert '<a href="#intro">Intro</a>' in doc.html and 'id="intro"' in doc.html
+
+
+def test_headings_in_quotes_move_with_the_rest():
+    doc = convert_markdown("# T\n\n### A\n\n> ### Q\n>\n> text\n")
+    assert '<h2 id="a">A</h2>' in doc.html and '<h2 id="q">Q</h2>' in doc.html
