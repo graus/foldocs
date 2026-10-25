@@ -1,0 +1,3 @@
+about = "A table of contents as Word makes one: links to bookmarks on the headings, with page numbers."
+lost = ["1", "2"]
+why = "A page number means nothing on a web page: the entries link to their headings instead."

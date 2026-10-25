@@ -235,7 +235,7 @@ def test_a_word_file_with_a_dtd_anywhere_is_refused(tmp_path, part):
     with pytest.raises(ElementTree.ParseError):
         word.word_html(data)
     if part == "word/fontTable.xml":
-        assert word._fixed_pitch_fonts(data) == frozenset()
+        assert word._part(data, part) is None
 
 
 def test_a_word_file_whose_document_has_another_name_is_checked_too(tmp_path):

@@ -1,14 +1,13 @@
 {
- "title": null,
+ "title": "Reisverslag",
  "subtitle": null,
  "html": [
-  "<p>Reisverslag</p>",
   "<h2 id=\"inleiding\">Inleiding</h2>",
   "<p>We vertrokken vroeg.</p>",
-  "<p>Dag één</p>",
+  "<h3 id=\"dag-een\">Dag één</h3>",
   "<p>Regen, en toen zon.</p>",
-  "<p>Wie niet waagt, die niet wint.</p>"
+  "<blockquote>Wie niet waagt, die niet wint.</blockquote>"
  ],
- "text": "Reisverslag We vertrokken vroeg. Dag één Regen, en toen zon. Wie niet waagt, die niet wint.",
+ "text": "We vertrokken vroeg. Regen, en toen zon.",
  "links": []
 }
