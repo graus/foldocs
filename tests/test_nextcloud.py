@@ -9,6 +9,7 @@ from urllib.parse import quote, unquote, urlparse
 import docx
 import pytest
 import requests
+from PIL import Image
 
 from foldocs import cache, config, render, sync
 from foldocs.sources import DOCX, TooLarge
@@ -88,8 +89,8 @@ class Reply:
 
 
 class FakeServer:
-    def __init__(self, tree=TREE):
-        self.tree, self.requests = tree, []
+    def __init__(self, tree=TREE, files=FILES):
+        self.tree, self.files, self.requests = tree, files, []
 
     def _path(self, url: str) -> str:
         path = unquote(urlparse(url).path)
@@ -110,12 +111,12 @@ class FakeServer:
 
     def get(self, url, timeout=None, stream=False):
         path = self._path(url)
-        return Reply(200, FILES[path]) if path in FILES else Reply(404)
+        return Reply(200, self.files[path]) if path in self.files else Reply(404)
 
 
-def nextcloud(tree=TREE) -> Nextcloud:
+def nextcloud(tree=TREE, files=FILES) -> Nextcloud:
     source = Nextcloud(SHARE)
-    source.http = FakeServer(tree)
+    source.http = FakeServer(tree, files)
     return source
 
 
@@ -254,3 +255,41 @@ def test_a_listing_over_max_bytes_is_refused():
     source.max_bytes = 100
     with pytest.raises(TooLarge):
         source.walk()
+
+
+def jpeg() -> bytes:
+    buf = io.BytesIO()
+    Image.new("RGB", (40, 30), "teal").save(buf, "JPEG")
+    return buf.getvalue()
+
+
+# A Markdown file as Nextcloud's Text app saves it: a pasted image goes into a hidden folder beside it.
+TEXT_TREE = {
+    "/": {},
+    "/2 Notes": {"fileid": "20"},
+    "/2 Notes/Trip.md": {"fileid": "21", "type": "text/markdown"},
+    "/2 Notes/.attachments.21": {"fileid": "22"},
+    "/2 Notes/.attachments.21/beach day.jpg": {"fileid": "23", "type": "image/jpeg"},
+    "/2 Notes/notes.txt": {"fileid": "24", "type": "text/plain"},
+}
+TEXT_FILES = {
+    "/2 Notes/Trip.md": b"# A trip\n\nSand.\n\n![The beach](.attachments.21/beach%20day.jpg)\n",
+    "/2 Notes/.attachments.21/beach day.jpg": jpeg(),
+}
+
+
+def test_a_markdown_file_and_its_images_from_nextcloud_text(tmp_path):
+    """Its images are on its page, but no section or photo of their own."""
+    entries, _ = nextcloud(TEXT_TREE, TEXT_FILES).walk()
+    assert {e.name for e in entries} == {"Trip.md", "beach day.jpg"}  # not the .txt
+
+    settings = config.Settings(SHARE, {}, tmp_path, "https://example.org", "Ann", False)
+    sync.sync(settings, nextcloud(TEXT_TREE, TEXT_FILES))
+    assert {e["id"] for e in cache.read_json(settings.cache_dir / "manifest.json")} == {"21"}
+    assert [f["path"] for f in cache.read_json(settings.cache_dir / "folders.json")] == [["2 Notes"]]
+    content = cache.read_json(settings.cache_dir / "content" / "21.json")
+    assert content["title"] == "A trip" and content["cover"]
+    render.build(settings)
+    page = (settings.public_dir / "notes" / "a-trip" / "index.html").read_text()
+    assert "Sand." in page and 'alt="The beach"' in page
+    assert not any("attachments" in p.name for p in settings.public_dir.rglob("*"))

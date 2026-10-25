@@ -235,3 +235,42 @@ def test_loop_tries_a_failed_build_again_the_next_round(tmp_path, monkeypatch):
 
     cli.loop(s, lambda: [s], build_all, rounds=2)  # nothing changes in the folder after round one
     assert calls == ["build", "build"]
+
+
+class FakeShare(FakeDrive):
+    """A source whose documents are files, read with download()."""
+
+    def __init__(self, entries, files):
+        super().__init__(entries)
+        self.files = files
+
+    def download(self, entry):
+        return self.files[entry.name]
+
+
+def markdown(name, path):
+    return Entry(id=name.replace(".", "-"), name=name, mime="text/markdown", path=path, created="t", modified="t1")
+
+
+def test_a_markdown_files_images_are_read_from_the_folder_by_their_path(tmp_path, caplog):
+    s = settings(tmp_path)
+    post, other = markdown("post.md", ["writing", "2026"]), markdown("other.md", ["writing"])
+    photo = Entry("p", "a b.jpg", "image/jpeg", ["writing", "photos"], "t", "t1")
+    files = {
+        "post.md": b"Words.\n\n![](../photos/a%20b.jpg) ![](../../../outside.jpg) ![](../other.md) ![](missing.jpg)\n",
+        "a b.jpg": jpeg(),
+        "other.md": b"Other.",
+    }
+    sync.sync(s, FakeShare([post, photo, other], files))
+    content = cache.read_json(s.cache_dir / "content" / "post-md.json")
+    assert content["html"].count("<img") == 1 and content["cover"]  # only the photo in the folder
+    assert "outside.jpg" in caplog.text and "Not an image: other.md" in caplog.text
+
+
+def test_hidden_files_and_folders_are_not_published(tmp_path):
+    s = settings(tmp_path)
+    shown = markdown("shown.md", ["writing"])
+    hidden = [markdown("draft.md", ["writing", ".drafts"]), markdown(".secret.md", ["writing"])]
+    sync.sync(s, FakeShare([shown, *hidden], {"shown.md": b"Hi", "draft.md": b"x", ".secret.md": b"x"}))
+    assert [e["name"] for e in cache.read_json(s.cache_dir / "manifest.json")] == ["shown.md"]
+    assert cache.Cache(s.cache_dir).published() == {"shown-md"}

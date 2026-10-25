@@ -1,11 +1,12 @@
 """Make a document a page: the same for every format (see formats/), from the clean HTML its
 format reads it into.
 
-Clean HTML is blocks (p, h1-h6, ul and ol with li, table, blockquote, hr, and div only to group
-them) holding text in a few inline tags (a, strong, em, code, s, sup, sub, br) and images (img,
-with data-width for a share of the text's width). Here the page is rebuilt from those tags and
-safe links alone, so no markup or styling a file carries reaches the site; the headings move a
-level down below the page's title and get ids of their own, and each image becomes a figure.
+Clean HTML is blocks (p, h1-h6, ul and ol with li, table, blockquote, pre with code, hr, and div
+only to group them) holding text in a few inline tags (a, strong, em, code, s, sup, sub, br) and
+images (img, with data-width for a share of the text's width). A table cell holds blocks or text.
+Here the page is rebuilt from those tags and safe links alone, so no markup or styling a file
+carries reaches the site; the headings move a level down below the page's title and get ids of
+their own, and each image becomes a figure.
 """
 
 import re
@@ -29,6 +30,7 @@ INLINE = {"strong", "em", "code", "s", "sup", "sub"}
 SAME_AS = {"b": "strong", "i": "em", "del": "s", "strike": "s"}  # the tags HTML has for the same thing
 HEADING = re.compile(r"h[1-6]")
 ANCHOR_ID = re.compile(r"[\w.-]+")  # an id a link in the document may point at
+BLOCKS = frozenset({"p", "ul", "ol", "table", "div", "blockquote", "pre", "hr", "h1", "h2", "h3", "h4", "h5", "h6"})
 
 
 @dataclass
@@ -69,6 +71,14 @@ def _shared_sizes(share: int) -> str:
     The text is about 42.5rem wide in every bundled theme (images.SIZES), the screen less its
     margins on a phone."""
     return f"(min-width: 48rem) {42.5 * share / 100:.1f}rem, calc((100vw - 2rem) * {share / 100:.2f})"
+
+
+def _trim(tag: Tag) -> None:
+    """Drop the white space a block opens or ends with, such as the line breaks between tags."""
+    tag.smooth()  # neighboring strings as one
+    for end, strip in ((0, str.lstrip), (-1, str.rstrip)):
+        if tag.contents and isinstance(child := tag.contents[end], NavigableString):
+            child.replace_with(NavigableString(strip(str(child))))
 
 
 FIRST = {"paragraph": ("p",), "heading": ("h2",), "list": ("ul", "ol")}
@@ -136,9 +146,17 @@ class _Converter:
                     self.heading_ids[el["id"]] = slug
             return blocks
         if el.name == "blockquote":
+            if el.find(BLOCKS, recursive=False):  # paragraphs of its own, as a Markdown quote has
+                quote = self._holder(el, "blockquote")
+                return [quote] if quote.contents else []
             return self._paragraph(el, "blockquote")
         if el.name == "hr":
             return [self.new("hr")]
+        if el.name == "pre":  # a block of code: its lines as they are
+            pre, code = self.new("pre"), self.new("code")
+            code.string = el.get_text().rstrip("\n")
+            pre.append(code)
+            return [pre]
         if el.name in ("ul", "ol"):
             return [self._list(el)]
         if el.name == "table":
@@ -160,6 +178,7 @@ class _Converter:
         imgs = [img.extract() for img in el.find_all("img")]
         tag = self.new(name)
         self._inline(el, tag)
+        _trim(tag)
         blocks = [tag] if tag.get_text(strip=True) else []
         return blocks + [fig for img in imgs if (fig := self._figure(img))]
 
@@ -212,10 +231,28 @@ class _Converter:
             self.slugs.add(src["id"])
             dst["id"] = src["id"]
 
+    def _holder(self, el: Tag, name: str) -> Tag:
+        """A tag that holds blocks (a quote, a list item). A paragraph alone in it, or with only
+        lists after it, is its text: how the tag reads anyway."""
+        tag = self.new(name)
+        blocks = self._blocks(el.find_all(recursive=False))
+        if blocks and blocks[0].name == "p" and all(b.name in ("ul", "ol") for b in blocks[1:]):
+            tag.extend(list(blocks.pop(0).children))
+        tag.extend(blocks)
+        return tag
+
     def _list(self, el: Tag) -> Tag:
         """A list, and the lists inside its items."""
         lst = self.new(el.name)
+        if el.name == "ol" and (start := el.get("start", "1")).isdigit() and start != "1":
+            lst["start"] = start  # a list that goes on after something in between
         for item in el.find_all("li", recursive=False):
+            if item.find(BLOCKS - {"ul", "ol"}, recursive=False):  # paragraphs, code: a Markdown item
+                li = self._holder(item, "li")
+                if li.contents:
+                    self._anchor(item, li)
+                    lst.append(li)
+                continue
             nested = [sub.extract() for sub in item.find_all(["ul", "ol"], recursive=False)]
             blocks = self._paragraph(item, "li")
             if nested and not any(b.name == "li" for b in blocks):
@@ -241,7 +278,10 @@ class _Converter:
             row = self.new("tr")
             for td in tr.find_all(["td", "th"], recursive=False):
                 cell = self.new("td")
-                blocks = self._blocks(td.find_all(recursive=False))
+                if td.find(BLOCKS, recursive=False):
+                    blocks = self._blocks(td.find_all(recursive=False))
+                else:  # text right in the cell
+                    blocks = self._paragraph(td, "p")
                 if len(blocks) == 1 and blocks[0].name == "p":
                     blocks = list(blocks[0].children)
                 for block in blocks:

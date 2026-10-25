@@ -49,8 +49,11 @@ def sync(settings: Settings, source: Source | None = None, settle: int = 0) -> b
     Returns whether anything the site shows has changed, so the caller knows to rebuild."""
     source = source or open_source(settings)
     cache = Cache(settings.cache_dir)
-    entries, folders = source.walk()
-    tree = {(*e.path, e.name): e for e in entries}
+    listed, folders = source.walk()
+    # Every file by its path, hidden ones too, for a document that shows one; of two with one name
+    # in a folder (Drive allows it), the newest.
+    tree = {(*e.path, e.name): e for e in sorted(listed, key=lambda e: e.modified)}
+    entries, folders = [e for e in listed if not e.hidden], [f for f in folders if not f.hidden]
     previous = cache.manifest() or []
     if not entries and previous:
         # Between deleting everything and uploading it again, the folder is empty for a moment;

@@ -53,6 +53,8 @@ same way for every format; `images` makes WebP variants → `site` models the fo
 
 ## Gotchas
 
+- A name starting with "." is hidden: listed, so a Markdown file can show the images in one
+  (Nextcloud Text's `.attachments.<id>`), never published.
 - `THEME_DIR` must start with `./` or `/`: Docker Compose treats a bare name as a named volume.
 - `assets/screenshots/` and `assets/drawings/` are generated from the live foldocs.com site;
   don't edit them by hand.

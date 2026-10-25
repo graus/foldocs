@@ -3,8 +3,8 @@ from xml.etree import ElementTree
 import pytest
 
 from foldocs import convert
-from foldocs.formats import fonts, gdoc, word
-from foldocs.sources import DocExport
+from foldocs.formats import Reading, fonts, gdoc, markdown, word
+from foldocs.sources import DocExport, Entry
 
 
 def image(src):
@@ -283,3 +283,85 @@ def test_a_tables_bold_first_row_is_its_header():
 
 def test_a_heading_never_takes_an_id_the_page_already_has():
     assert 'id="main-2"' in convert_body("<p>Intro.</p><h2>Main</h2><p>a</p>").html
+
+
+class OneFile:
+    def __init__(self, data):
+        self.data = data
+
+    def download(self, entry):
+        return self.data
+
+
+def convert_markdown(text):
+    entry = Entry("m", "m.md", "text/markdown", [], "", "")
+    read = markdown.read(Reading(entry, OneFile(text.encode())))
+    return convert.convert(read.html, image, attrs, read.title, read.subtitle)
+
+
+def test_a_markdown_file_takes_the_same_road_as_a_doc():
+    doc = convert_markdown(
+        "# A trip\n\nWe went **out** and saw ~~nothing~~ `code`.\n\n## Day one\n\n"
+        "- one\n  - nested\n- two\n\n> A quote\n\n![The beach](beach.jpg)\n\n---\n"
+    )
+    assert doc.title == "A trip"
+    assert doc.html == (
+        "<p>We went <strong>out</strong> and saw <s>nothing</s> <code>code</code>.</p>\n"
+        '<h2 id="day-one">Day one</h2>\n'
+        "<ul><li>one<ul><li>nested</li></ul></li><li>two</li></ul>\n"
+        "<blockquote>A quote</blockquote>\n"
+        '<figure><img alt="The beach" decoding="async" height="10" loading="lazy" src="/media/x/a.webp" width="10"/>'
+        "</figure>\n<hr/>"
+    )
+    assert [i["src"] for i in doc.images] == ["beach.jpg"]
+
+
+def test_markdown_front_matter_gives_a_title_and_subtitle():
+    doc = convert_markdown('---\ntitle: "From the top"\ndescription: A line\ntags: [a, b]\n---\n\n# Heading\n\nText.\n')
+    assert (doc.title, doc.subtitle) == ("From the top", "A line")
+    assert doc.html == '<h2 id="heading">Heading</h2>\n<p>Text.</p>'  # a title named: the heading stays
+
+
+def test_markdown_tables_and_code_blocks_keep_their_shape():
+    doc = convert_markdown("| Name | **Age** |\n|---|---|\n| Ann | 30 |\n\n```py\nif x:\n    y()\n```\n")
+    assert doc.html == (
+        '<div class="table-wrap"><table><thead><tr><th scope="col">Name</th><th scope="col">Age</th></tr></thead>'
+        "<tbody><tr><td>Ann</td><td>30</td></tr></tbody></table></div>\n"
+        "<pre><code>if x:\n    y()</code></pre>"
+    )
+
+
+def test_markdown_in_page_links_reach_their_headings():
+    doc = convert_markdown("[Down](#day-one) [nowhere](#gone)\n\n## Day one\n")
+    assert '<a href="#day-one">Down</a> <a href="#">nowhere</a>' in doc.html
+
+
+def test_html_and_scripts_in_markdown_never_reach_the_site():
+    doc = convert_markdown('<script>alert(1)</script>\n\n[click](javascript:alert(1)) <b onclick="x">b</b>\n')
+    assert "<script" not in doc.html and "<b " not in doc.html and "href" not in doc.html
+    assert "&lt;script&gt;" in doc.html  # shown as the text it is
+
+
+def test_markdown_front_matter_saved_on_windows_is_read_too():
+    doc = convert_markdown("---\r\ntitle: Hello\r\ntags:\r\n  - a\r\n---\r\nSome text.\r\n")
+    assert (doc.title, doc.html) == ("Hello", "<p>Some text.</p>")
+
+
+def test_a_markdown_file_opening_with_a_rule_keeps_its_text():
+    doc = convert_markdown("---\n\nIntro paragraph\n\nHeading\n---\n\nBody\n")
+    assert "Intro paragraph" in doc.html and "Body" in doc.html
+    assert convert_markdown("---\n---\n\nText\n").html == "<hr/>\n<hr/>\n<p>Text</p>"  # two rules, no front matter
+
+
+def test_a_numbered_list_goes_on_after_a_code_block():
+    doc = convert_markdown("1. a\n2. b\n\n```\ncode\n```\n\n3. c\n")
+    assert doc.html == '<ol><li>a</li><li>b</li></ol>\n<pre><code>code</code></pre>\n<ol start="3"><li>c</li></ol>'
+
+
+def test_markdown_quotes_and_list_items_keep_their_paragraphs_and_code():
+    doc = convert_markdown("> one\n>\n> two\n\n> alone\n\n- Step:\n\n  ```\n  x\n  y\n  ```\n- Next\n\n  - sub\n")
+    assert doc.html == (
+        "<blockquote><p>one</p><p>two</p></blockquote>\n"
+        "<blockquote>alone</blockquote>\n"
+        "<ul><li><p>Step:</p><pre><code>x\ny</code></pre></li><li>Next<ul><li>sub</li></ul></li></ul>"
+    )

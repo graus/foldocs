@@ -65,6 +65,9 @@ def test_a_google_doc_is_only_read_from_a_service_that_exports_it():
         (DOC, "Notes", "gdoc"),
         (DOCX, "Notes.docx", "word"),
         ("application/octet-stream", "NOTES.DOCX", "word"),  # a server that doesn't know the type
+        ("text/markdown", "Notes.md", "markdown"),
+        ("text/x-markdown", "Notes.md", "markdown"),
+        ("text/plain", "Notes.markdown", "markdown"),
         ("image/jpeg", "me.jpg", "image"),
         ("text/plain", "notes.txt", None),
         ("application/vnd.oasis.opendocument.text", "notes.odt", None),
@@ -81,6 +84,7 @@ def test_an_entry_records_its_format_once():
     entry = Entry("a", "A post.docx", DOCX, [], "", "")
     assert (entry.format, entry.kind, entry.stem) == ("word", "doc", "A post")
     assert WordFile().stem("v1.0") == "v1.0"
+    assert Entry("b", "intro.MD", "text/markdown", [], "", "").stem == "intro"
     with pytest.raises(ValueError):
         Entry("a", "notes.txt", "text/plain", [], "", "")
 
@@ -111,4 +115,21 @@ def test_footnotes_lead_to_their_notes_and_back():
 
 
 def test_formats_are_named_for_people():
-    assert formats.described() == "a Google Doc, a Word file or an image"
+    assert formats.described() == "a Google Doc, a Word file, a Markdown file or an image"
+
+
+def test_a_link_from_a_document_leads_to_a_file_by_its_path():
+    doc = Entry("d", "post.md", "text/markdown", ["writing", "2026"], "", "")
+    photo = Entry("p", "a b.jpg", "image/jpeg", ["writing", "photos"], "", "")
+    attached = Entry("q", "x.png", "image/png", ["writing", "2026", ".attachments.12"], "", "")
+    file = Reading(doc, FakeSource({}), {(*e.path, e.name): e for e in (doc, photo, attached)})
+    assert file.linked("../photos/a%20b.jpg") is photo
+    assert file.linked("./.attachments.12/x.png") is attached
+    for src in ["../../../a b.jpg", "missing.jpg", "/writing/photos/a%20b.jpg", "https://example.org/x.png", "#top"]:
+        assert file.linked(src) is None, src
+
+
+def test_a_hidden_file_or_folder_starts_with_a_dot():
+    assert Entry("a", "x.jpg", "image/jpeg", ["Trip", ".attachments.12"], "", "").hidden
+    assert Entry("a", ".x.jpg", "image/jpeg", [], "", "").hidden
+    assert not Entry("a", "x.jpg", "image/jpeg", ["Trip"], "", "").hidden

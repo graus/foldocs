@@ -2,7 +2,9 @@
 over the public WebDAV endpoint: a PROPFIND to list a folder, a GET to download a file. The share
 token is the user name and the share's password, if it has one, the password: no account needed.
 
-Nextcloud keeps documents as files, so pages are Word files (.docx), read as Docs are. What Drive
+Nextcloud keeps documents as files, so pages are Word files (.docx) or Markdown files (.md), as
+its Text app writes them; the images a Markdown file shows are in a hidden folder beside it
+(.attachments.<id>), listed with the rest. What Drive
 has and a share doesn't: file descriptions, so photos get no captions. A file's creation time is
 used where Nextcloud knows it, else its upload time, else its last change.
 """

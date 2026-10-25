@@ -9,8 +9,8 @@ A service (Google Drive, Nextcloud) is where the folder lives; its Provider says
 its links and open them, and gives its short name (kind: "drive", "nextcloud"); the Source it opens
 reads one folder.
 
-What a file is (a Doc, a Word file, an image) is not a source's business: the formats are in
-formats/, and a source lists whatever format_for() recognizes, with the format it found. A
+What a file is (a Doc, a Word or Markdown file, an image) is not a source's business: the formats
+are in formats/, and a source lists whatever format_for() recognizes, with the format it found. A
 service with a document format of its own (Google Docs) can export it: Exports below.
 
 Adding a service is one module in this folder: a class with the methods of Source below, and a PROVIDER that says how to
@@ -32,6 +32,7 @@ from .. import formats
 from ..formats import DOC as DOC
 from ..formats import DOCX as DOCX
 from ..formats import IMAGE_TYPES as IMAGE_TYPES
+from ..formats import MARKDOWN as MARKDOWN
 
 TIMEOUT = 120  # seconds, for one request to a service
 DOWNLOAD_MAX = 50 << 20  # bytes: a larger file is refused rather than let it take the sync's memory
@@ -99,8 +100,12 @@ class Entry:
 
     @property
     def stem(self) -> str:
-        """The name without its extension (.docx), for titles and roles."""
+        """The name without its extension (.docx, .md), for titles and roles."""
         return self.reader.stem(self.name)
+
+    @property
+    def hidden(self) -> bool:
+        return hidden([*self.path, self.name])
 
 
 @dataclass
@@ -109,6 +114,17 @@ class Folder:
 
     path: list[str]  # names of the folders from the root down to this one
     id: str = ""
+
+    @property
+    def hidden(self) -> bool:
+        return hidden(self.path)
+
+
+def hidden(path: list[str]) -> bool:
+    """Whether a file or folder is hidden, or in a hidden folder: a name starting with a dot. It is
+    not on the site, but there for a document that shows it, as Nextcloud keeps a Markdown file's
+    images."""
+    return any(name.startswith(".") for name in path)
 
 
 @dataclass
@@ -133,7 +149,7 @@ class Source(Protocol):
         ...
 
     def download(self, entry: Entry) -> bytes:
-        """The file itself: an image, or a document that is a file (a Word file)."""
+        """The file itself: an image, or a document that is a file (Word, Markdown)."""
         ...
 
     def file_url(self, entry: Entry) -> str:

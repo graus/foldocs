@@ -1,14 +1,14 @@
 """The kinds of file a site is made from, whichever source they come from: what each one is, how
 to recognize it, and how to read a document of that kind.
 
-There are two kinds. A document (a Google Doc, a Word file) is a page of text; an image is a
+There are two kinds. A document (a Google Doc, a Word or a Markdown file) is a page of text; an image is a
 photo. A document's format reads the file into clean HTML (the tags convert.py lists, nothing
 else: no styles, no classes) with its title and subtitle, and says where its images come from.
 That is all that sets one format apart: convert.convert() then makes every document a page the
 same way, so a heading or a table looks the same on the site whatever it was written in.
 
 Adding a format is a Document below, with the types and extensions it is known by, a read() and a
-line in FORMATS; the reading itself goes in a module of its own in this folder (gdoc.py, word.py),
+line in FORMATS; the reading itself goes in a module of its own in this folder (word.py, markdown.py),
 imported only when a file of that format is read. Nothing else names a format: the sources list
 what format_for() recognizes. tests/test_formats.py checks every format against this contract.
 """
@@ -20,6 +20,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
+from urllib.parse import unquote, urlparse
 
 if TYPE_CHECKING:
     from bs4 import Tag
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
 
 DOC = "application/vnd.google-apps.document"
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+MARKDOWN = frozenset({"text/markdown", "text/x-markdown"})
 # The images published: photos, screenshots and GIFs. Others (SVG, PSD, camera RAW) are left out.
 IMAGE_TYPES = frozenset(f"image/{t}" for t in ("jpeg", "png", "webp", "gif", "heic", "heif"))
 # What a server says of a file it doesn't know the type of: then its extension says.
@@ -43,8 +45,26 @@ class Reading:
     source: Source
     tree: dict[tuple[str, ...], Entry] = field(default_factory=dict)
 
-    def download(self) -> bytes:
-        return self.source.download(self.entry)
+    def download(self, other: Entry | None = None) -> bytes:
+        """The file itself, or another file in the folder it shows."""
+        return self.source.download(other or self.entry)
+
+    def linked(self, src: str) -> Entry | None:
+        """The file a link in the document leads to by a path from the document's folder
+        (photo.jpg, ../photos/photo.jpg, .attachments.12/photo.jpg); None if src is no such path,
+        or one that leads out of the folder."""
+        parts = urlparse(src)
+        if parts.scheme or parts.netloc or not parts.path or src.startswith(("/", "#")):
+            return None
+        path = list(self.entry.path)
+        for name in unquote(parts.path).split("/"):
+            if name == "..":
+                if not path:
+                    return None
+                path.pop()
+            elif name not in ("", "."):
+                path.append(name)
+        return self.tree.get(tuple(path))
 
 
 @dataclass
@@ -60,7 +80,7 @@ class DocText:
 class Format(ABC):
     """A kind of file the site is made from."""
 
-    name: ClassVar[str]  # short, as an entry records it: "gdoc", "word", "image"
+    name: ClassVar[str]  # short, as an entry records it: "gdoc", "word", "markdown", "image"
     kind: ClassVar[str]  # "doc" (a page of text) or "image" (a photo)
     label: ClassVar[str]  # as people know it, for messages: "a Word file"
     mimes: ClassVar[frozenset[str]]  # the types a source lists it as
@@ -112,6 +132,20 @@ class WordFile(Document):
         return word.read(file.download())
 
 
+class MarkdownFile(Document):
+    """A Markdown file (.md), as Nextcloud's Text app writes them; its images are other files in
+    the folder."""
+
+    name, label = "markdown", "a Markdown file"
+    mimes = MARKDOWN
+    extensions = (".md", ".markdown")
+
+    def read(self, file: Reading) -> DocText:
+        from . import markdown
+
+        return markdown.read(file)
+
+
 class Image(Format):
     """A photo, a screenshot or a GIF: a page of its own, or a portrait."""
 
@@ -120,7 +154,7 @@ class Image(Format):
 
 
 # Every format, in the order they are tried.
-FORMATS: tuple[Format, ...] = (GoogleDoc(), WordFile(), Image())
+FORMATS: tuple[Format, ...] = (GoogleDoc(), WordFile(), MarkdownFile(), Image())
 
 
 def format_for(mime: str, name: str = "") -> Format | None:
