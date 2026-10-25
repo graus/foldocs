@@ -19,6 +19,7 @@ built in every bundled theme.
 import copy
 import dataclasses
 import difflib
+import functools
 import hashlib
 import io
 import json
@@ -170,12 +171,20 @@ def page(case: Case, data: bytes | None = None) -> convert.Doc:
     return convert.convert(text.body, image, image_attrs, text.title, text.subtitle)
 
 
-def expected(case: Case) -> dict:
-    """What the case gives: its page, or the error that says why there is none."""
+@functools.cache
+def read(case: Case) -> convert.Doc | ValueError:
+    """The case's page, or the error that says why there is none; read once for every test."""
     try:
-        doc = page(case)
+        return page(case)
     except ValueError as e:
-        return {"error": str(e)}
+        return e
+
+
+def expected(case: Case) -> dict:
+    """What the case gives, as expected.json has it."""
+    doc = read(case)
+    if isinstance(doc, ValueError):
+        return {"error": str(doc)}
     return {
         "title": doc.title,
         "subtitle": doc.subtitle,
@@ -328,13 +337,10 @@ def _gdoc_words(data: bytes) -> set[str]:
 
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
 def test_every_case_holds(case):
-    data = case.input.read_bytes()
-    try:
-        doc = page(case)
-    except ValueError:
-        assert "error" in expected(case)
-        return
-    check_page(doc, source_words(case, data), frozenset(case.about.get("lost", [])))
+    doc = read(case)
+    if isinstance(doc, ValueError):
+        return  # a file that can't be read says why, and nothing else
+    check_page(doc, source_words(case, case.input.read_bytes()), frozenset(case.about.get("lost", [])))
 
 
 # Variants: a corpus file with its tags, attributes and lines dropped, repeated, swapped and cut short.
