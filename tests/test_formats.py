@@ -125,6 +125,12 @@ def test_a_link_from_a_document_leads_to_a_file_by_its_path():
     file = Reading(doc, FakeSource({}), {(*e.path, e.name): e for e in (doc, photo, attached)})
     assert file.linked("../photos/a%20b.jpg") is photo
     assert file.linked("./.attachments.12/x.png") is attached
+    assert (
+        Reading(Entry("r", "r.md", "text/markdown", [], "", ""), FakeSource({}), {("a/b", "c.jpg"): photo}).linked(
+            "a%2Fb/c.jpg"
+        )
+        is photo
+    )  # a / in a folder's name, as Drive allows
     for src in ["../../../a b.jpg", "missing.jpg", "/writing/photos/a%20b.jpg", "https://example.org/x.png", "#top"]:
         assert file.linked(src) is None, src
 

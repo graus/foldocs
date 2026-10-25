@@ -36,6 +36,9 @@ IMAGE_TYPES = frozenset(f"image/{t}" for t in ("jpeg", "png", "webp", "gif", "he
 UNTYPED = frozenset({"", "text/plain", "application/octet-stream"})
 
 
+Tree = dict[tuple[str, ...], "Entry"]  # every file in the folder, by its folders' names and its own
+
+
 @dataclass
 class Reading:
     """A document being read: the file, the source it comes from, and every file in the folder by
@@ -43,10 +46,10 @@ class Reading:
 
     entry: Entry
     source: Source
-    tree: dict[tuple[str, ...], Entry] = field(default_factory=dict)
+    tree: Tree = field(default_factory=dict)
     # Every path it looked up in the folder, and what it found there (see found()): the page is
     # redone when that changes, a file there replaced, changed, gone or there at last.
-    uses: dict[str, list[str] | None] = field(default_factory=dict)
+    uses: dict[tuple[str, ...], list[str] | None] = field(default_factory=dict)
 
     def download(self, other: Entry | None = None) -> bytes:
         """The file itself, or another file in the folder it shows."""
@@ -60,22 +63,25 @@ class Reading:
         if parts.scheme or parts.netloc or not parts.path or src.startswith(("/", "#")):
             return None
         path = list(self.entry.path)
-        for name in unquote(parts.path).split("/"):
+        for name in map(unquote, parts.path.split("/")):  # a name can have a / in it (%2F), in Drive
             if name == "..":
                 if not path:
                     return None
                 path.pop()
             elif name not in ("", "."):
                 path.append(name)
-        key = "/".join(path)
-        self.uses[key] = found(self.tree, key)
+        self.uses[tuple(path)] = found(self.tree, path)
         return self.tree.get(tuple(path))
 
+    def used(self) -> list[list]:
+        """`uses`, as a document's content records it: [path, found] pairs."""
+        return [[list(path), then] for path, then in self.uses.items()]
 
-def found(tree: dict[tuple[str, ...], Entry], path: str) -> list[str] | None:
-    """The file at a path in the folder ("writing/photo.jpg"), as a document's content records
+
+def found(tree: Tree, path: list[str] | tuple[str, ...]) -> list[str] | None:
+    """The file at a path in the folder (["writing", "photo.jpg"]), as a document's content records
     it: its ID and modification time; None if there is none."""
-    entry = tree.get(tuple(path.split("/")))
+    entry = tree.get(tuple(path))
     return [entry.id, entry.modified] if entry else None
 
 

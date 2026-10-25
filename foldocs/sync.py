@@ -23,7 +23,7 @@ import requests
 from . import convert, design, images
 from .cache import Cache, media_name, write_json
 from .config import Settings, role
-from .formats import Document, Reading, found
+from .formats import Document, Reading, Tree, found
 from .sources import Entry, Folder, Source, open_source
 
 log = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ VERSION = 16
 # Files that couldn't be processed, and how they were then (their modification time, and what
 # they found in the folder): one is tried again once that changes, not every minute. A failure to
 # reach the service is tried again.
-_failed: dict[str, tuple[str, dict]] = {}
+_failed: dict[str, tuple[str, list]] = {}
 
 
 def _passing(e: Exception) -> bool:
@@ -73,9 +73,6 @@ def sync(settings: Settings, source: Source | None = None, settle: int = 0) -> b
     return bool(changed or removed or moved)
 
 
-Tree = dict[tuple[str, ...], Entry]  # every file in the folder, by its folders' names and its own
-
-
 def _update(
     settings: Settings, cache: Cache, source: Source, entries: list[Entry], tree: Tree, settle: int
 ) -> tuple[int, int]:
@@ -84,7 +81,7 @@ def _update(
     changed = waiting = 0
     for entry in entries:
         cached = cache.content(entry.id)
-        uses = cached.get("uses", {}) if cached else {}
+        uses = cached.get("uses", []) if cached else []
         unchanged = (
             cached and cached["modified"] == entry.modified and cached["version"] == VERSION and _same(uses, tree)
         )
@@ -110,7 +107,7 @@ def _update(
             log.exception("Could not process %s (%s)", entry.name, entry.id)
             shutil.rmtree(staging, ignore_errors=True)
             if not _passing(e):
-                _failed[entry.id] = (entry.modified, file.uses)
+                _failed[entry.id] = (entry.modified, file.used())
             continue
         _failed.pop(entry.id, None)
         shutil.rmtree(media, ignore_errors=True)
@@ -121,14 +118,14 @@ def _update(
     return changed, waiting
 
 
-def _same(uses: dict[str, list[str] | None], tree: Tree) -> bool:
+def _same(uses: list[list], tree: Tree) -> bool:
     """Whether every path a document looked up in the folder still has what it found there."""
-    return all(found(tree, path) == then for path, then in uses.items())
+    return all(found(tree, path) == then for path, then in uses)
 
 
-def _touched(entry: Entry, uses: dict[str, list[str] | None], tree: Tree) -> datetime:
+def _touched(entry: Entry, uses: list[list], tree: Tree) -> datetime:
     """When the document last changed, or a file it shows: that settles too."""
-    files = [entry, *(e for path in uses if (e := tree.get(tuple(path.split("/")))))]
+    files = [entry, *(e for path, _ in uses if (e := tree.get(tuple(path))))]
     return max(datetime.fromisoformat(e.modified) for e in files)
 
 
@@ -226,5 +223,5 @@ def _process(file: Reading, out_dir: Path) -> dict:
         "cover": doc.images[0] if doc.images else None,
         "links": doc.links,
         "first": doc.first,
-        "uses": file.uses,
+        "uses": file.used(),
     }

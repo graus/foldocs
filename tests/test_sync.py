@@ -285,7 +285,7 @@ def test_a_page_is_redone_when_an_image_it_shows_changes(tmp_path):
     share = FakeShare([post, photo], {"post.md": b"![](.attachments.1/a.jpg)", "a.jpg": jpeg()})
     sync.sync(s, share)
     content = cache.read_json(s.cache_dir / "content" / "post-md.json")
-    assert content["uses"] == {"writing/.attachments.1/a.jpg": ["p", "t1"]}
+    assert content["uses"] == [[["writing", ".attachments.1", "a.jpg"], ["p", "t1"]]]
     before = content["cover"]["variants"][0]["file"]
 
     share.downloads = []
@@ -294,7 +294,7 @@ def test_a_page_is_redone_when_an_image_it_shows_changes(tmp_path):
     share.files["a.jpg"], share.entries = jpeg("navy"), [post, Entry(**{**photo.__dict__, "modified": "t2"})]
     assert sync.sync(s, share) is True
     content = cache.read_json(s.cache_dir / "content" / "post-md.json")
-    assert content["uses"] == {"writing/.attachments.1/a.jpg": ["p", "t2"]}
+    assert content["uses"] == [[["writing", ".attachments.1", "a.jpg"], ["p", "t2"]]]
     assert content["cover"]["variants"][0]["file"] != before  # a new name: no browser keeps the old one
 
     share.entries = [post]
@@ -310,14 +310,14 @@ def test_a_page_is_redone_when_another_file_takes_its_images_place_or_one_turns_
     share = FakeShare([post, a], files)
     sync.sync(s, share)
     content = cache.read_json(s.cache_dir / "content" / "post.json")
-    assert content["html"].count("<img") == 1 and content["uses"]["writing/b.jpg"] is None
+    assert content["html"].count("<img") == 1 and [["writing", "b.jpg"], None] in content["uses"]
 
     # a.jpg renamed away (the same file, unchanged), a new one uploaded under its name
     replaced = Entry("a2", "a.jpg", "image/jpeg", ["writing"], settled, settled)
     share.entries = [post, Entry(**{**a.__dict__, "name": "old.jpg"}), replaced]
     share.files["a.jpg"] = files["a2.jpg"]
     assert sync.sync(s, share) is True
-    assert cache.read_json(s.cache_dir / "content" / "post.json")["uses"]["writing/a.jpg"] == ["a2", settled]
+    assert [["writing", "a.jpg"], ["a2", settled]] in cache.read_json(s.cache_dir / "content" / "post.json")["uses"]
 
     share.entries.append(Entry("b", "b.jpg", "image/jpeg", ["writing"], settled, settled))  # there at last
     assert sync.sync(s, share) is True
@@ -339,10 +339,22 @@ def test_a_page_that_failed_is_tried_again_when_a_file_it_looked_for_changes(tmp
     s, settled = settings(tmp_path), "2026-01-01T00:00:00Z"
     post = Entry("post", "post.md", "text/markdown", ["writing"], settled, settled)
     share = FakeShare([post], {"post.md": b"![](a.jpg)"})
-    sync._failed["post"] = (settled, {"writing/a.jpg": None})  # as a failure after looking for a.jpg leaves it
+    sync._failed["post"] = (settled, [[["writing", "a.jpg"], None]])  # as a failure after looking for a.jpg leaves it
     sync.sync(s, share)
     assert share.downloads == []  # nothing changed: not tried again
     share.entries.append(Entry("a", "a.jpg", "image/jpeg", ["writing"], settled, settled))
     share.files["a.jpg"] = jpeg()
     sync.sync(s, share)
     assert share.downloads[0] == "post.md"
+
+
+def test_a_folder_with_a_slash_in_its_name_is_followed_too(tmp_path):
+    """Drive allows "/" in a name: a path is a list of names, never one string."""
+    s, settled = settings(tmp_path), "2026-01-01T00:00:00Z"
+    post = Entry("post", "post.md", "text/markdown", ["2024/25"], settled, settled)
+    photo = Entry("p", "a.jpg", "image/jpeg", ["2024/25"], settled, settled)
+    share = FakeShare([post, photo], {"post.md": b"![](a.jpg)", "a.jpg": jpeg()})
+    sync.sync(s, share)
+    assert cache.read_json(s.cache_dir / "content" / "post.json")["uses"] == [[["2024/25", "a.jpg"], ["p", settled]]]
+    share.entries = [post, Entry(**{**photo.__dict__, "modified": "2026-02-01T00:00:00Z"})]
+    assert sync.sync(s, share) is True
