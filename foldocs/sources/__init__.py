@@ -173,6 +173,16 @@ class Exports(Protocol):
         ...
 
 
+@runtime_checkable
+class Links(Protocol):
+    """A source whose service has links of its own to its files (a Google Doc's address), which a
+    document in the folder can carry."""
+
+    def file_id(self, url: str) -> str | None:
+        """The ID of the file a link leads to, if it is a link to one of the service's files."""
+        ...
+
+
 @dataclass(frozen=True)
 class Provider:
     """A service a shared folder can live in."""

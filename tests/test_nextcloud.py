@@ -294,3 +294,11 @@ def test_a_markdown_file_and_its_images_from_nextcloud_text(tmp_path):
     page = (settings.public_dir / "notes" / "a-trip" / "index.html").read_text()
     assert "Sand." in page and 'alt="The beach"' in page
     assert not any("attachments" in p.name for p in settings.public_dir.rglob("*"))
+
+
+def test_a_link_to_a_file_on_the_same_server_names_its_id():
+    source = Nextcloud(SHARE)
+    assert source.file_id("https://cloud.example.org/f/123") == "123"
+    assert source.file_id("https://cloud.example.org/index.php/f/45") == "45"
+    assert source.file_id("https://other.example.org/f/1") is None
+    assert source.file_id(SHARE) is None

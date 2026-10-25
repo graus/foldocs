@@ -21,7 +21,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, ClassVar
-from urllib.parse import unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 if TYPE_CHECKING:
     from bs4 import Tag
@@ -60,6 +60,36 @@ class Reading:
         """The file a link in the document leads to by a path from the document's folder
         (photo.jpg, ../photos/photo.jpg, .attachments.12/photo.jpg); None if src is no such path,
         one that leads out of the folder, or one with no file (yet). Recorded in `uses`."""
+        path = self._path(src)
+        if path is None:
+            return None
+        self.uses[path] = found(self.tree, path)
+        return self.tree.get(path)
+
+    def page_link(self, href: str) -> str | None:
+        """A link in the document to another document, photo or folder in the folder, by a path
+        from the document's folder (Notes.md, ../Trip/, Plan.docx#day-one) or by the service's own
+        link to the file (a Google Doc's): as a folder: address, which the build makes the
+        address of that page, by the file's ID where it is known (it may be renamed), else by its
+        path (it may be added later). None for a link to anything else."""
+        from ..sources import Links
+
+        fragment = urlparse(href).fragment
+        if (path := self._path(href)) is not None:
+            entry = self.tree.get(path)
+        elif isinstance(self.source, Links) and (file_id := self.source.file_id(href)):
+            entry = next((e for e in self.tree.values() if e.id == file_id), None)
+            if entry is None:
+                return None
+            path, fragment = entry.where, ""  # a place in a Doc it links to is no place on its page
+        else:
+            return None
+        address = "folder:/" + "/".join(quote(name, safe="") for name in path)
+        return address + (f"?id={entry.id}" if entry else "") + (f"#{fragment}" if fragment else "")
+
+    def _path(self, src: str) -> tuple[str, ...] | None:
+        """The path in the folder a link leads to from the document's folder, or None if it is no
+        path from there, or one that leads out of the folder."""
         parts = urlparse(src)
         if parts.scheme or parts.netloc or not parts.path or src.startswith(("/", "#")):
             return None
@@ -71,8 +101,7 @@ class Reading:
                 path.pop()
             elif name not in ("", "."):
                 path.append(name)
-        self.uses[tuple(path)] = found(self.tree, path)
-        return self.tree.get(tuple(path))
+        return tuple(path)
 
     def used(self) -> list[list]:
         """`uses`, as a document's content records it: [path, found] pairs."""

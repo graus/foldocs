@@ -139,3 +139,20 @@ def test_a_hidden_file_or_folder_starts_with_a_dot():
     assert Entry("a", "x.jpg", "image/jpeg", ["Trip", ".attachments.12"], "", "").hidden
     assert Entry("a", ".x.jpg", "image/jpeg", [], "", "").hidden
     assert not Entry("a", "x.jpg", "image/jpeg", ["Trip"], "", "").hidden
+
+
+class LinkingSource(FakeSource):
+    def file_id(self, url):
+        return url.split("#")[0].rsplit("/", 1)[-1] if url.startswith("https://docs.example.org/") else None
+
+
+def test_a_link_to_another_file_in_the_folder_is_kept_for_the_build():
+    doc = Entry("d", "post.md", "text/markdown", ["writing"], "", "")
+    plan = Entry("p", "Plan van aanpak.md", "text/markdown", ["writing"], "", "")
+    file = Reading(doc, LinkingSource({}), {e.where: e for e in (doc, plan)})
+    assert file.page_link("Plan%20van%20aanpak.md#stap-1") == "folder:/writing/Plan%20van%20aanpak.md?id=p#stap-1"
+    assert file.page_link("../photos/") == "folder:/photos"  # a folder, or a file not there yet: by its path
+    assert file.page_link("https://docs.example.org/p#heading=h.1") == "folder:/writing/Plan%20van%20aanpak.md?id=p"
+    for href in ["https://docs.example.org/elsewhere", "https://example.org/", "#top", "/about", "../../x.md"]:
+        assert file.page_link(href) is None, href
+    assert file.uses == {}  # a page is no image: nothing to redo when it changes

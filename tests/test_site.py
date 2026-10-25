@@ -534,3 +534,17 @@ def test_a_photo_in_the_feed_is_escaped_once(tmp_path):
     feed = (settings.public_dir / "feed.xml").read_text()
     assert "&lt;p&gt;Ink &amp;amp; paper&lt;/p&gt;" in feed  # <p>Ink &amp; paper</p>, as text
     assert "&amp;lt;" not in feed
+
+
+def test_links_to_other_files_in_the_folder_lead_to_their_pages():
+    """By the file's ID (it may have been renamed since), else by its path (added since)."""
+    destinations = {"a1": "/notes/plan/", ("notes", "New.md"): "/notes/new/", ("notes",): "/notes/"}
+    html = (
+        '<p><a href="folder:/notes/Old%20name.md?id=a1#day">renamed</a> <a href="folder:/notes/New.md">new</a> '
+        '<a href="folder:/notes">folder</a> <a href="folder:/gone.md?id=zz">gone</a> '
+        '<a href="folder:/gone.md" id="ref-1">marked</a></p>'
+    )
+    assert render.folder_links(html, destinations) == (
+        '<p><a href="/notes/plan/#day">renamed</a> <a href="/notes/new/">new</a> '
+        '<a href="/notes/">folder</a> gone <a id="ref-1">marked</a></p>'
+    )
