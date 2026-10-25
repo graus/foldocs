@@ -537,16 +537,27 @@ def test_a_photo_in_the_feed_is_escaped_once(tmp_path):
 
 
 def test_links_to_other_files_in_the_folder_lead_to_their_pages():
-    """By the file's ID (it may have been renamed since), else by its path (added since)."""
-    destinations = {"a1": "/notes/plan/", ("notes", "New.md"): "/notes/new/", ("notes",): "/notes/"}
+    """By the ID (the file may have been renamed since), else by the path (added since); a folder's
+    path ends in "", so a file of the same name can't take its place."""
+    destinations = {
+        "a1": "/notes/plan/",
+        ("notes", "New.md"): "/notes/new/",
+        ("notes", "Trip"): "/notes/trip-doc/",  # a Doc named Trip, beside the folder Trip
+        ("notes", "Trip", ""): "/notes/trip/",
+        ("",): "/",
+        "f9": "/notes/trip/",
+    }
+    google = "folder:?id={}&amp;url=https%3A%2F%2Fdocs.google.com%2Fdocument%2Fd%2F{}%2Fedit"
     html = (
         '<p><a href="folder:/notes/Old%20name.md?id=a1#day">renamed</a> <a href="folder:/notes/New.md">new</a> '
-        '<a href="folder:/notes">folder</a> <a href="folder:/gone.md?id=zz">gone</a> '
-        '<a href="folder:/gone.md" id="ref-1">marked</a> <a href="folder:/?id=a1">by ID</a> '
-        '<a href="folder:/?id=later">not yet</a></p>'
+        '<a href="folder:/notes/Trip/">folder</a> <a href="folder:/notes/Trip">doc</a> <a href="folder:/">home</a> '
+        '<a href="folder:/gone.md?id=zz">gone</a> <a href="folder:/gone.md" id="ref-1">marked</a> '
+        f'<a href="{google.format("a1", "a1")}">doc by ID</a> <a href="{google.format("f9", "f9")}">folder by ID</a> '
+        f'<a href="{google.format("xx", "xx")}">elsewhere</a></p>'
     )
     assert render.folder_links(html, destinations) == (
         '<p><a href="/notes/plan/#day">renamed</a> <a href="/notes/new/">new</a> '
-        '<a href="/notes/">folder</a> gone <a id="ref-1">marked</a> <a href="/notes/plan/">by ID</a> '
-        "not yet</p>"
+        '<a href="/notes/trip/">folder</a> <a href="/notes/trip-doc/">doc</a> <a href="/">home</a> '
+        'gone <a id="ref-1">marked</a> <a href="/notes/plan/">doc by ID</a> <a href="/notes/trip/">folder by ID</a> '
+        '<a href="https://docs.google.com/document/d/xx/edit">elsewhere</a></p>'
     )

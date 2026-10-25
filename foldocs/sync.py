@@ -29,7 +29,7 @@ from .sources import Entry, Folder, Source, open_source
 log = logging.getLogger(__name__)
 
 # Bump when processing changes, to redo every file on the next sync.
-VERSION = 17
+VERSION = 18
 
 # Files that couldn't be processed, and how they were then (their modification time, and what
 # they found in the folder): one is tried again once that changes, not every minute. A failure to

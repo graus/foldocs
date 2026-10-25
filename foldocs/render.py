@@ -245,17 +245,25 @@ def _environment(
 
 def folder_links(html: str, destinations: dict) -> str:
     """A page's links to other files and folders in the folder (folder: addresses, see
-    formats.Reading.page_link) as links to their pages: by the file's ID, else by its path. A link
-    to a file with no page (a hidden one, or one gone) is its text alone."""
+    formats.Reading.page_link) as links to their pages: by the ID, else by the path (a folder's
+    ending in "", as a link to it ends in /). A service's link to a file not in the folder is that
+    link again; a link by path to a file with no page (a hidden one, or one gone) is its text."""
     if 'href="folder:' not in html:
         return html
     soup = BeautifulSoup(html, "html.parser")
     for a in soup.find_all("a", href=re.compile("^folder:")):
         parts = urlsplit(a["href"])
-        path = tuple(unquote(name) for name in parts.path.strip("/").split("/") if name)
-        url = destinations.get(parse_qs(parts.query).get("id", [""])[0]) or (destinations.get(path) if path else None)
+        query = parse_qs(parts.query)
+        url = destinations.get(query.get("id", [""])[0])
+        if not url and parts.path:  # by its path: a folder's, or a file's, else a folder of that name
+            names = tuple(unquote(name) for name in parts.path.strip("/").split("/") if name)
+            keys = [(*names, "")] if parts.path.endswith("/") else [names, (*names, "")]
+            url = next((destinations[key] for key in keys if key in destinations), None)
+        elsewhere = query.get("url", [""])[0]
         if url:
             a["href"] = url + (f"#{parts.fragment}" if parts.fragment else "")
+        elif elsewhere.startswith("https://"):
+            a["href"] = elsewhere
         elif a.get("id"):
             del a["href"]
         else:

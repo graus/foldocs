@@ -135,7 +135,12 @@ def test_a_link_to_a_doc_or_file_names_its_id():
         ("https://docs.google.com/spreadsheets/d/S1/edit#gid=0", "S1"),
         ("https://drive.google.com/file/d/XyZ/view", "XyZ"),
         ("https://drive.google.com/open?id=Q1", "Q1"),
+        ("https://docs.google.com/document/u/1/d/D2/edit", "D2"),  # signed in to more than one account
+        ("https://docs.google.com/a/example.com/document/d/D3/edit", "D3"),  # an organization's
+        ("https://drive.google.com/uc?id=U1&export=download", "U1"),
+        ("https://drive.google.com/drive/folders/F1", "F1"),
+        ("https://drive.google.com/drive/u/0/folders/F2", "F2"),
         ("https://example.com/document/d/not-google", None),
-        ("https://drive.google.com/drive/folders/F1", None),
+        ("https://drive.google.com/drive/my-drive", None),
     ]:
         assert Drive.file_id(url) == found, url

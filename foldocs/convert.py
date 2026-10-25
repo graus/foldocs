@@ -30,7 +30,7 @@ LinkHandler = Callable[[str], str | None]
 
 # Links that may reach the site: web, mail and phone links, relative or in-page ones, and links to
 # another file in the folder, which the build makes that page's address.
-SAFE_LINK = re.compile(r"^((?i:https?:|mailto:|tel:)|#|/|folder:/)")  # folder: as page_link writes it
+SAFE_LINK = re.compile(r"^((?i:https?:|mailto:|tel:)|#|/|folder:)")  # folder: as page_link writes it
 THEME_IDS = ("main", "page-h", "topics-h", "archive-title", "cta-title")  # ids the themes use on a page
 INLINE = {"strong", "em", "code", "s", "sup", "sub"}
 SAME_AS = {"b": "strong", "i": "em", "del": "s", "strike": "s"}  # the tags HTML has for the same thing
