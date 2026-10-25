@@ -45,6 +45,14 @@ def _is_drive(folder_url: str) -> bool:
     return (urlparse(folder_url).hostname or "") in HOSTS
 
 
+def unzip(data: bytes) -> DocExport:
+    """A Doc's zip export: its HTML, and the images bundled with it by the src they have there."""
+    z = zipfile.ZipFile(io.BytesIO(data))
+    html_name = next(n for n in z.namelist() if n.endswith(".html"))
+    files = {n: z.read(n) for n in z.namelist() if n != html_name}
+    return DocExport(z.read(html_name).decode("utf-8"), files)
+
+
 class Drive:
     kind = "drive"
     max_items: int | None = None
@@ -127,10 +135,7 @@ class Drive:
                 log.info("Zip export of %s refused (too large), falling back to HTML", entry.id)
                 return DocExport(self._get(f"/{entry.id}/export", mimeType="text/html").decode("utf-8"))
             resp.raise_for_status()
-        z = zipfile.ZipFile(io.BytesIO(body(resp, self.max_bytes)))
-        html_name = next(n for n in z.namelist() if n.endswith(".html"))
-        files = {n: z.read(n) for n in z.namelist() if n != html_name}
-        return DocExport(z.read(html_name).decode("utf-8"), files)
+        return unzip(body(resp, self.max_bytes))
 
     def download(self, entry: Entry) -> bytes:
         resp = self.http.get(f"{API}/{entry.id}", params={"alt": "media"}, timeout=TIMEOUT, stream=True)

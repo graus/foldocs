@@ -1,0 +1,11 @@
+{
+ "title": "Text box",
+ "subtitle": null,
+ "html": [
+  "<p>Before the box. After the box.</p>",
+  "<p>Opening hours: nine to five.</p>",
+  "<p>Last line.</p>"
+ ],
+ "text": "Before the box. After the box. Opening hours: nine to five. Last line.",
+ "links": []
+}

@@ -1,0 +1,14 @@
+{
+ "title": "Scripts and emoji",
+ "subtitle": null,
+ "html": [
+  "<p>Emoji: 🚲 🌧️ 👩🏽‍💻 and flags 🇳🇱.</p>",
+  "<p>مرحبا بالعالم</p>",
+  "<p>שלום עולם</p>",
+  "<p>日本語のテキスト、そして中文。</p>",
+  "<p>Combining: été; zero​width; non breaking.</p>",
+  "<p>Ligatures ﬁ and ﬂ, math 𝑥² + 𝑦².</p>"
+ ],
+ "text": "Emoji: 🚲 🌧️ 👩🏽‍💻 and flags 🇳🇱. مرحبا بالعالم שלום עולם 日本語のテキスト、そして中文。 Combining: été; zero​width; non breaking. Ligatures ﬁ and ﬂ, math 𝑥² + 𝑦².",
+ "links": []
+}

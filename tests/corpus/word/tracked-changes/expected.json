@@ -1,0 +1,12 @@
+{
+ "title": "Tracked changes",
+ "subtitle": null,
+ "html": [
+  "<p>The trip starts on Tuesday in Utrecht.</p>",
+  "<p>A paragraph added in review.</p>",
+  "<p>Moved here.</p>",
+  "<p><strong>Now bold.</strong></p>"
+ ],
+ "text": "The trip starts on Tuesday in Utrecht. A paragraph added in review. Moved here. Now bold.",
+ "links": []
+}
