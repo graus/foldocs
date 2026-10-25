@@ -2,8 +2,8 @@
  "title": "Footnotes",
  "subtitle": null,
  "html": [
-  "<p>The bridge is old.<sup><sup><a href=\"#footnote-1\" id=\"footnote-ref-1\">[1]</a></sup></sup> The map is online.<sup><sup><a href=\"#footnote-2\" id=\"footnote-ref-2\">[2]</a></sup></sup></p>",
-  "<p>And at the end.<sup><sup><a href=\"#endnote-1\" id=\"endnote-ref-1\">[3]</a></sup></sup></p>",
+  "<p>The bridge is old.<sup><a href=\"#footnote-1\" id=\"footnote-ref-1\">[1]</a></sup> The map is online.<sup><a href=\"#footnote-2\" id=\"footnote-ref-2\">[2]</a></sup></p>",
+  "<p>And at the end.<sup><a href=\"#endnote-1\" id=\"endnote-ref-1\">[3]</a></sup></p>",
   "<ol><li id=\"footnote-1\">Since 1843, says the sign. <a href=\"#footnote-ref-1\">↑</a></li><li id=\"footnote-2\"><p>See <a href=\"https://example.com/map\">example.com</a></p><p>A second paragraph in the note. <a href=\"#footnote-ref-2\">↑</a></p></li><li id=\"endnote-1\">An endnote. <a href=\"#endnote-ref-1\">↑</a></li></ol>"
  ],
  "text": "The bridge is old.[1] The map is online.[2] And at the end.[3]",

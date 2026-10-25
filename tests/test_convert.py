@@ -421,3 +421,17 @@ def test_markdown_front_matter_values(front, expected):
 def test_a_list_item_of_an_image_alone_keeps_it():
     doc = convert_body('<ul><li>one</li><li><img src="a.png"></li></ul>')
     assert doc.html.startswith("<ul><li>one</li><li><figure>") and len(doc.images) == 1
+
+
+def test_a_heading_taken_out_as_the_title_leaves_its_id_to_the_next():
+    doc = convert_markdown("# Notes\n\nText.\n\n## Notes\n\n[up](#notes)\n")
+    assert doc.title == "Notes" and '<h2 id="notes">Notes</h2>' in doc.html
+
+
+def test_a_merged_cell_keeps_its_span():
+    html = convert_body('<table><tr><td colspan="2">a</td></tr><tr><td rowspan="x">b</td><td>c</td></tr></table>').html
+    assert '<td colspan="2">a</td>' in html and "<td>b</td>" in html
+
+
+def test_a_line_break_ending_a_paragraph_is_left_out():
+    assert convert_body("<p>Text<br><br></p><p><br>More</p>").html == "<p>Text</p>\n<p>More</p>"

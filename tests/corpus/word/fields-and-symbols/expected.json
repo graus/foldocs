@@ -3,15 +3,15 @@
  "subtitle": null,
  "html": [
   "<p>See <a href=\"https://example.com/route\">the route</a>, not this.</p>",
-  "<p>Details are <a href=\"#\">below</a>.</p>",
+  "<p>Details are <a href=\"#_Ref100\">below</a>.</p>",
   "<p>Printed on , page 1.</p>",
   "<p>Tick ✓ e‑mail, book­keeping\tafter a tab<br/>after a breakafter a page break</p>",
   "<p>Date: 1-10-2026 Done:  In Utrecht.</p>",
-  "<p>The details: two days.</p>"
+  "<p><a id=\"_Ref100\"></a>The details: two days.</p>"
  ],
  "text": "See the route, not this. Details are below. Printed on , page 1. Tick ✓ e‑mail, book­keeping after a tab after a breakafter a page break Date: 1-10-2026 Done: In Utrecht. The details: two days.",
  "links": [
   "https://example.com/route",
-  "#"
+  "#_Ref100"
  ]
 }
