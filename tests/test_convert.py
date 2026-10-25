@@ -395,3 +395,21 @@ def test_a_word_table_of_contents_leads_to_its_headings():
 def test_headings_in_quotes_move_with_the_rest():
     doc = convert_markdown("# T\n\n### A\n\n> ### Q\n>\n> text\n")
     assert '<h2 id="a">A</h2>' in doc.html and '<h2 id="q">Q</h2>' in doc.html
+
+
+@pytest.mark.parametrize(
+    "front, expected",
+    [
+        ("title: Hi\ntags:\n- a\n- b", {"title": "Hi", "tags": None}),  # a list as Jekyll and Obsidian write it
+        ("title: >\n  A long title\ndescription: |\n  more", {"title": None, "description": None}),
+        ("title: 'Tis the season", {"title": "'Tis the season"}),
+        ('title: He said "hi"', {"title": 'He said "hi"'}),
+        ('title: "Quoted # not a comment"', {"title": "Quoted # not a comment"}),
+        ("title: Jan # a draft", {"title": "Jan"}),
+        ("title: C# tips", {"title": "C# tips"}),
+    ],
+)
+def test_markdown_front_matter_values(front, expected):
+    meta, text = markdown.front_matter(f"---\n{front}\n---\nBody\n")
+    assert text == "Body\n"
+    assert {key: meta.get(key) for key in expected} == expected

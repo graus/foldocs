@@ -12,8 +12,10 @@ from . import DocText, Reading, inline_image
 MARKDOWN = MarkdownIt("commonmark", {"html": False}).enable(["table", "strikethrough"])
 # Between --- lines at the top, as static site generators write it.
 FRONT_MATTER = re.compile(r"\A---[ \t]*\n(.*?)^---[ \t]*$\n?", re.DOTALL | re.MULTILINE)
-# What front matter is made of: `key: value` lines, the indented lines of a longer value, comments.
-FRONT_LINE = re.compile(r"[\w-]+[ \t]*:.*|[ \t]+.*|#.*|[ \t]*")
+# What front matter is made of: `key: value` lines, the items and indented lines of a longer value,
+# comments.
+KEY = re.compile(r"([\w-]+)[ \t]*:(.*)")
+FRONT_LINE = re.compile(rf"{KEY.pattern}|-([ \t].*)?|[ \t]+.*|#.*|[ \t]*")
 
 
 def read(file: Reading) -> DocText:
@@ -42,11 +44,19 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
     opens with a rule (---) and has text that isn't front matter before the next one keeps it all."""
     m = FRONT_MATTER.match(text)
     lines = m[1].splitlines() if m else []
-    if not m or not all(FRONT_LINE.fullmatch(line) for line in lines) or not any(":" in line for line in lines):
+    keys = [found for line in lines if (found := KEY.fullmatch(line))]
+    if not m or not keys or not all(FRONT_LINE.fullmatch(line) for line in lines):
         return {}, text
-    meta = {}
-    for line in lines:
-        key, sep, value = line.partition(":")
-        if sep and key.strip() and not line[0].isspace() and value.strip():
-            meta[key.strip().lower()] = value.strip().strip("\"'")
+    meta = {key[1].lower(): value for key in keys if (value := _value(key[2]))}
     return meta, text[m.end() :]
+
+
+def _value(raw: str) -> str | None:
+    """A front matter value as text: without the quotes around it, or a comment after it; None
+    for none, or for one on the lines that follow (> or |)."""
+    value = raw.strip()
+    if re.fullmatch(r"[>|][+-]?\d*", value):
+        return None
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+        return value[1:-1]
+    return re.sub(r"\s+#.*", "", value) or None
