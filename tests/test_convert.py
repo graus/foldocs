@@ -3,6 +3,8 @@ from xml.etree import ElementTree
 import pytest
 
 from foldocs import convert
+from foldocs.formats import Reading, fonts, gdoc, markdown, word
+from foldocs.sources import DocExport, Entry
 
 
 def image(src):
@@ -20,8 +22,19 @@ def attrs(info, sizes=None):
     return {"src": info["base"] + "a.webp", "width": 10, "height": 10} | ({"sizes": sizes} if sizes else {})
 
 
+def convert_doc(html):
+    """A Docs export, read as its format does, then made a page."""
+    text = gdoc.clean(DocExport(html), fetch=None)
+    return convert.convert(text.body, image, attrs, text.title, text.subtitle)
+
+
 def convert_body(body):
-    return convert.convert(f"<html><body>{body}</body></html>", image, attrs)
+    return convert_doc(f"<html><body>{body}</body></html>")
+
+
+def convert_word(data):
+    text = word.clean(word.word_html(data))
+    return convert.convert(text.body, image, attrs, text.title, text.subtitle)
 
 
 def test_title_subtitle_and_inline_styles():
@@ -88,7 +101,7 @@ def test_a_word_file_takes_the_same_road(tmp_path):
     d.add_paragraph("Geciteerd.", style="Quote")
     path = tmp_path / "t.docx"
     d.save(path)
-    doc = convert.convert(convert.word_html(path.read_bytes()), image, attrs)
+    doc = convert_word(path.read_bytes())
     assert (doc.title, doc.subtitle) == ("Titel", "Ondertitel")
     assert doc.html == '<h2 id="kop">Kop</h2>\n<ul><li>Een **punt**</li></ul>\n<blockquote>Geciteerd.</blockquote>'
 
@@ -102,10 +115,8 @@ def test_only_safe_links_survive():
 
 def test_an_image_keeps_its_share_of_the_page_width():
     page = '<html><body style="max-width: 432pt; padding: 72pt">{}</body></html>'  # 576px of text
-    small = convert.convert(
-        page.format('<p><img src="a.png" style="width: 288.00px; height: 100px"></p>'), image, attrs
-    )
-    full = convert.convert(page.format('<p><img src="a.png" style="width: 566.93px; height: 300px"></p>'), image, attrs)
+    small = convert_doc(page.format('<p><img src="a.png" style="width: 288.00px; height: 100px"></p>'))
+    full = convert_doc(page.format('<p><img src="a.png" style="width: 566.93px; height: 300px"></p>'))
     assert small.html.startswith('<figure style="--width: 50%">')
     assert 'sizes="(min-width: 48rem) 21.2rem, calc((100vw - 2rem) * 0.50)"' in small.html  # half the file, too
     assert full.html.startswith("<figure>") and "sizes" not in full.html  # (nearly) the page's width: the column's
@@ -127,7 +138,7 @@ def test_a_word_tables_header_row_is_kept(tmp_path):
     header.append(header.makeelement("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tblHeader", {}))
     path = tmp_path / "t.docx"
     d.save(path)
-    doc = convert.convert(convert.word_html(path.read_bytes()), image, attrs)
+    doc = convert_word(path.read_bytes())
     assert "Setting" in doc.html and "Accent" in doc.html
 
 
@@ -159,16 +170,16 @@ def test_text_in_a_monospace_font_is_code(tmp_path):
     p.add_run(".")
     path = tmp_path / "t.docx"
     d.save(path)
-    assert convert.convert(convert.word_html(path.read_bytes()), image, attrs).html == (
+    assert convert_word(path.read_bytes()).html == (
         "<p>Put <code>home</code> in <code>site</code>, <strong>then</strong> <em>wait</em>.</p>"
     )
 
 
 def test_only_monospace_fonts_are_code():
     for font in ["Roboto Mono", '"Source Code Pro"', "Courier New", "'Consolas', monospace", "VT323"]:
-        assert convert._monospace(font), font
+        assert fonts.monospace(font), font
     for font in ["Monotype Corsiva", "Monoton", "Montserrat", "Arial", "Cascadia Mono Sans"]:
-        assert not convert._monospace(font), font
+        assert not fonts.monospace(font), font
 
 
 def test_a_word_files_own_fixed_pitch_fonts_are_code(tmp_path):
@@ -191,7 +202,7 @@ def test_a_word_files_own_fixed_pitch_fonts_are_code(tmp_path):
     with zipfile.ZipFile(path, "w") as z:
         for name, data in files.items():
             z.writestr(name, data)
-    html = convert.convert(convert.word_html(path.read_bytes()), image, attrs).html
+    html = convert_word(path.read_bytes()).html
     assert html == "<p>Set <code>FOLDER_URL</code> once.</p>"
 
 
@@ -222,16 +233,16 @@ def test_a_word_file_with_a_dtd_anywhere_is_refused(tmp_path, part):
     """A Word file is untrusted: entities in its XML are refused before they're expanded."""
     data = _word_file_with(tmp_path, part, DTD)
     with pytest.raises(ElementTree.ParseError):
-        convert.word_html(data)
+        word.word_html(data)
     if part == "word/fontTable.xml":
-        assert convert._fixed_pitch_fonts(data) == frozenset()
+        assert word._fixed_pitch_fonts(data) == frozenset()
 
 
 def test_a_word_file_whose_document_has_another_name_is_checked_too(tmp_path):
     """The file itself says which part is the document: its name proves nothing."""
     data = _word_file_with(tmp_path, "word/doc.dat", DTD, document="word/doc.dat")
     with pytest.raises(ElementTree.ParseError):
-        convert.word_html(data)
+        word.word_html(data)
 
 
 def test_an_svg_naming_its_standard_dtd_is_fine_but_one_declaring_entities_is_not(tmp_path):
@@ -240,9 +251,9 @@ def test_an_svg_naming_its_standard_dtd_is_fine_but_one_declaring_entities_is_no
         b'<?xml version="1.0"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" '
         b'"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg xmlns="http://www.w3.org/2000/svg"/>'
     )
-    assert "Text" in convert.word_html(_word_file_with(tmp_path, "word/media/image1.svg", svg))
+    assert "Text" in word.word_html(_word_file_with(tmp_path, "word/media/image1.svg", svg))
     with pytest.raises(ElementTree.ParseError):
-        convert.word_html(_word_file_with(tmp_path, "word/media/image1.svg", DTD))
+        word.word_html(_word_file_with(tmp_path, "word/media/image1.svg", DTD))
 
 
 def test_two_headings_with_the_same_text_get_ids_of_their_own():
@@ -272,3 +283,141 @@ def test_a_tables_bold_first_row_is_its_header():
 
 def test_a_heading_never_takes_an_id_the_page_already_has():
     assert 'id="main-2"' in convert_body("<p>Intro.</p><h2>Main</h2><p>a</p>").html
+
+
+class OneFile:
+    def __init__(self, data):
+        self.data = data
+
+    def download(self, entry):
+        return self.data
+
+
+def convert_markdown(text):
+    entry = Entry("m", "m.md", "text/markdown", [], "", "")
+    read = markdown.read(Reading(entry, OneFile(text.encode())))
+    return convert.convert(read.body, image, attrs, read.title, read.subtitle)
+
+
+def test_a_markdown_file_takes_the_same_road_as_a_doc():
+    doc = convert_markdown(
+        "# A trip\n\nWe went **out** and saw ~~nothing~~ `code`.\n\n## Day one\n\n"
+        "- one\n  - nested\n- two\n\n> A quote\n\n![The beach](beach.jpg)\n\n---\n"
+    )
+    assert doc.title == "A trip"
+    assert doc.html == (
+        "<p>We went <strong>out</strong> and saw <s>nothing</s> <code>code</code>.</p>\n"
+        '<h2 id="day-one">Day one</h2>\n'
+        "<ul><li>one<ul><li>nested</li></ul></li><li>two</li></ul>\n"
+        "<blockquote>A quote</blockquote>\n"
+        '<figure><img alt="The beach" decoding="async" height="10" loading="lazy" src="/media/x/a.webp" width="10"/>'
+        "</figure>\n<hr/>"
+    )
+    assert [i["src"] for i in doc.images] == ["beach.jpg"]
+
+
+def test_markdown_front_matter_gives_a_title_and_subtitle():
+    doc = convert_markdown('---\ntitle: "From the top"\ndescription: A line\ntags: [a, b]\n---\n\n# Heading\n\nText.\n')
+    assert (doc.title, doc.subtitle) == ("From the top", "A line")
+    assert doc.html == '<h2 id="heading">Heading</h2>\n<p>Text.</p>'  # a title named: the heading stays
+
+
+def test_markdown_tables_and_code_blocks_keep_their_shape():
+    doc = convert_markdown("| Name | **Age** |\n|---|---|\n| Ann | 30 |\n\n```py\nif x:\n    y()\n```\n")
+    assert doc.html == (
+        '<div class="table-wrap"><table><thead><tr><th scope="col">Name</th><th scope="col">Age</th></tr></thead>'
+        "<tbody><tr><td>Ann</td><td>30</td></tr></tbody></table></div>\n"
+        "<pre><code>if x:\n    y()</code></pre>"
+    )
+
+
+def test_markdown_in_page_links_reach_their_headings():
+    doc = convert_markdown("[Down](#day-one) [nowhere](#gone)\n\n## Day one\n")
+    assert '<a href="#day-one">Down</a> <a href="#">nowhere</a>' in doc.html
+
+
+def test_html_and_scripts_in_markdown_never_reach_the_site():
+    doc = convert_markdown('<script>alert(1)</script>\n\n[click](javascript:alert(1)) <b onclick="x">b</b>\n')
+    assert "<script" not in doc.html and "<b " not in doc.html and "href" not in doc.html
+    assert "&lt;script&gt;" in doc.html  # shown as the text it is
+
+
+def test_markdown_front_matter_saved_on_windows_is_read_too():
+    doc = convert_markdown("---\r\ntitle: Hello\r\ntags:\r\n  - a\r\n---\r\nSome text.\r\n")
+    assert (doc.title, doc.html) == ("Hello", "<p>Some text.</p>")
+
+
+def test_a_markdown_file_opening_with_a_rule_keeps_its_text():
+    doc = convert_markdown("---\n\nIntro paragraph\n\nHeading\n---\n\nBody\n")
+    assert "Intro paragraph" in doc.html and "Body" in doc.html
+    assert convert_markdown("---\n---\n\nText\n").html == "<hr/>\n<hr/>\n<p>Text</p>"  # two rules, no front matter
+
+
+def test_a_numbered_list_goes_on_after_a_code_block():
+    doc = convert_markdown("1. a\n2. b\n\n```\ncode\n```\n\n3. c\n")
+    assert doc.html == '<ol><li>a</li><li>b</li></ol>\n<pre><code>code</code></pre>\n<ol start="3"><li>c</li></ol>'
+
+
+def test_markdown_quotes_and_list_items_keep_their_paragraphs_and_code():
+    doc = convert_markdown("> one\n>\n> two\n\n> alone\n\n- Step:\n\n  ```\n  x\n  y\n  ```\n- Next\n\n  - sub\n")
+    assert doc.html == (
+        "<blockquote><p>one</p><p>two</p></blockquote>\n"
+        "<blockquote>alone</blockquote>\n"
+        "<ul><li><p>Step:</p><pre><code>x\ny</code></pre></li><li>Next<ul><li>sub</li></ul></li></ul>"
+    )
+
+
+def test_text_beside_a_block_in_a_list_item_is_kept():
+    """A tight Markdown list writes an item's text loose, before its code or quote."""
+    doc = convert_markdown("- item one\n  ```\n  code\n  ```\n- item\n  > quoted\n")
+    assert doc.html == (
+        "<ul><li><p>item one</p><pre><code>code</code></pre></li>"
+        "<li><p>item</p><blockquote>quoted</blockquote></li></ul>"
+    )
+
+
+def test_a_numbered_doc_list_goes_on_after_an_image():
+    doc = convert_body(
+        '<ol class="lst-kix_a-0 start" start="1"><li>one</li></ol><p>between</p>'
+        '<ol class="lst-kix_a-0" start="2"><li>two</li></ol>'
+    )
+    assert doc.html == '<ol><li>one</li></ol>\n<p>between</p>\n<ol start="2"><li>two</li></ol>'
+
+
+def test_a_word_table_of_contents_leads_to_its_headings():
+    """mammoth writes Word's bookmark inside the heading it marks."""
+    text = word.clean(
+        '<p><a href="#_Toc1">Intro</a></p><h1><a id="_Toc1"></a><a id="_Ref2"></a>Intro</h1>'
+        '<p><a href="#_Ref2">Up</a></p>'
+    )
+    doc = convert.convert(text.body, image, attrs, "Title")
+    assert '<a href="#intro">Up</a>' in doc.html
+    assert '<a href="#intro">Intro</a>' in doc.html and 'id="intro"' in doc.html
+
+
+def test_headings_in_quotes_move_with_the_rest():
+    doc = convert_markdown("# T\n\n### A\n\n> ### Q\n>\n> text\n")
+    assert '<h2 id="a">A</h2>' in doc.html and '<h2 id="q">Q</h2>' in doc.html
+
+
+@pytest.mark.parametrize(
+    "front, expected",
+    [
+        ("title: Hi\ntags:\n- a\n- b", {"title": "Hi", "tags": None}),  # a list as Jekyll and Obsidian write it
+        ("title: >\n  A long title\ndescription: |\n  more", {"title": None, "description": None}),
+        ("title: 'Tis the season", {"title": "'Tis the season"}),
+        ('title: He said "hi"', {"title": 'He said "hi"'}),
+        ('title: "Quoted # not a comment"', {"title": "Quoted # not a comment"}),
+        ("title: Jan # a draft", {"title": "Jan"}),
+        ("title: C# tips", {"title": "C# tips"}),
+    ],
+)
+def test_markdown_front_matter_values(front, expected):
+    meta, text = markdown.front_matter(f"---\n{front}\n---\nBody\n")
+    assert text == "Body\n"
+    assert {key: meta.get(key) for key in expected} == expected
+
+
+def test_a_list_item_of_an_image_alone_keeps_it():
+    doc = convert_body('<ul><li>one</li><li><img src="a.png"></li></ul>')
+    assert doc.html.startswith("<ul><li>one</li><li><figure>") and len(doc.images) == 1

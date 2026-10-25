@@ -7,6 +7,7 @@ import pytest
 import requests
 
 from foldocs import sources
+from foldocs.formats import DOC
 from foldocs.sources import drive as drive_module
 from foldocs.sources.drive import Drive
 
@@ -90,11 +91,11 @@ def test_a_doc_too_large_to_zip_is_exported_as_html_under_the_same_limit():
 
     drive = Drive("api-key", "root")
     drive.http = Session()
-    assert drive.export_doc(sources.Entry("d", "Doc", sources.DOC, [], "", "")).html == "<p>Hi</p>"
+    assert drive.export_doc(sources.Entry("d", "Doc", DOC, [], "", "")).html == "<p>Hi</p>"
     replies[:] = [response(403, refused), response(200, b"x" * 11)]
     drive.max_bytes = 10
     with pytest.raises(sources.TooLarge):
-        drive.export_doc(sources.Entry("d", "Doc", sources.DOC, [], "", ""))
+        drive.export_doc(sources.Entry("d", "Doc", DOC, [], "", ""))
 
 
 def test_an_unreachable_root_folder_stops_the_sync_instead_of_emptying_the_site():

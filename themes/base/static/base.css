@@ -27,6 +27,11 @@ p, li, dd, figcaption { text-wrap: pretty; }
 .table-wrap { overflow-x: auto; }
 .prose table { border-collapse: collapse; }
 .prose th { text-align: start; font-weight: 600; }
+/* A block of code in a document (from Markdown): its lines kept, scrolling sideways like a table */
+.prose pre { overflow-x: auto; padding: var(--space-2); border-radius: var(--radius); background: var(--color-band); }
+.prose pre code { padding: 0; background: none; white-space: pre; overflow-wrap: normal; }
+/* A quote or list item of more than one paragraph (from Markdown): a little space between them */
+.prose :is(blockquote, li) > :is(p, pre) + :is(p, pre) { margin-top: var(--space-2); }
 
 /* Focus: a ring on whatever the keyboard reaches, never on a mouse click */
 :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }

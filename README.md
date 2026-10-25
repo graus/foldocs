@@ -181,13 +181,18 @@ My site/                       shared: anyone with the link can view
 - **Order.** A number in front of a name sets the order and isn't shown: a folder whose files are
   all numbered keeps their order, any other shows its newest files first, dated. On the home page
   a section is a row of its first three pages, with a link to the rest.
-- **Documents** keep their headings, lists, links, tables, footnotes and images; an indented
-  paragraph becomes a quote, and text in a monospace font (or Word's *HTML Code* style) becomes
-  `code`.
+- **Documents** are Google Docs, Word files (`.docx`) or Markdown files (`.md`). They keep their
+  headings, lists, links, tables, footnotes (not in Markdown) and images; an indented paragraph
+  becomes a quote, and text in a monospace font (or Word's *HTML Code* style) becomes `code`. In
+  Markdown, a `#` heading that opens the file is its Title (or front matter's `title:`, with
+  `subtitle:` or `description:`), and an image is another file in the folder, linked by its path:
+  `![The beach](photos/beach.jpg)`.
 - **Photos** are dated by when they were taken and captioned by their description where the
   service has one. Drawings and diagrams are fitted rather than cropped.
-- **Everything in the folder is on the site**, about five minutes after you last touched a file
-  (Foldocs waits, so that an edit in progress isn't published). Keep drafts elsewhere.
+- **Hidden files and folders**, whose names start with a dot, are not on the site; a Markdown
+  file can still show the images in one.
+- **Everything else in the folder is on the site**, about five minutes after you last touched a
+  file (Foldocs waits, so that an edit in progress isn't published). Keep drafts elsewhere.
 
 The site never links to the folder (image addresses hide file IDs), except where a theme does on
 purpose, like the default theme's demo page.
@@ -214,16 +219,18 @@ gcloud services api-keys create --project my-site-drive --display-name site \
   --api-target=service=drive.googleapis.com
 ```
 
-Pages are Google Docs, or Word files uploaded as they are. The default theme has a demo page
-with the folder beside the site and a page on how it works.
+Pages are Google Docs, or Word or Markdown files uploaded as they are. The default theme has a
+demo page with the folder beside the site and a page on how it works.
 
 ### Nextcloud
 
 Share the folder with a **Share link**, read only. The link (`https://your-cloud/s/…`) goes in
 `FOLDER_URL`, and its password, if you gave it one, in `FOLDER_PASSWORD`. No
-account or key is needed. Pages are Word files (`.docx`). Compared with Drive:
+account or key is needed. Pages are Word files (`.docx`) or Markdown files (`.md`), as the Text
+app writes them: the images you paste into one are kept in a hidden folder beside it, and show on
+its page. Compared with Drive:
 
-- **Word files only.** OpenDocument files (`.odt`) are skipped, so set Collabora or OnlyOffice to
+- **Files only.** OpenDocument files (`.odt`) are skipped, so set Collabora or OnlyOffice to
   save as `.docx`.
 - **No captions.** Photos have no descriptions to caption them with.
 - **Dates.** An undated file gets its creation time, or failing that its upload time.
@@ -236,7 +243,9 @@ account or key is needed. Pages are Word files (`.docx`). Compared with Drive:
 Foldocs doesn't read OneDrive or Dropbox. Unlike Drive and Nextcloud, neither lets a shared
 folder be read without an account: both need an app registered with the service and a login.
 Adding a service is one module in [`foldocs/sources/`](foldocs/sources/__init__.py), which
-describes what it must do.
+describes what it must do. Adding a kind of document is one module in
+[`foldocs/formats/`](foldocs/formats/__init__.py): it reads the file into clean HTML, and the rest
+is the same for every format.
 
 ## Configuration
 

@@ -19,8 +19,15 @@ wheel and runs `foldocs check-theme` from it (the themes are force-included into
 ## How it fits together
 
 `sync` asks a source (`foldocs/sources/`: one module per service, registered in `__init__.py`)
-what changed → `cache` stores the files → `convert` turns Docs into HTML, `images` makes WebP
-variants → `site` models the folder as pages → `render` writes them through a theme.
+what changed → `cache` stores the files → a document's format (`foldocs/formats/`: one module per
+format, registered in `__init__.py`) reads it into clean HTML, and `convert` makes that a page the
+same way for every format; `images` makes WebP variants → `site` models the folder as pages →
+`render` writes them through a theme.
+
+- Sources say where a file is, formats what it is. A file type's quirks (Docs' styled spans, flat
+  lists) stay in its format's module; `convert` only takes the clean tags its docstring lists.
+- A service's own document format (Google Docs) is exported through the optional `Exports`
+  protocol; every source has `download`.
 
 - Two special Doc names, in `config.py`: `intro` (opens its folder's page) and `design` (root
   only: colors and fonts, read by `design.py`). Everything else is content.
@@ -46,6 +53,8 @@ variants → `site` models the folder as pages → `render` writes them through 
 
 ## Gotchas
 
+- A name starting with "." is hidden: listed, so a Markdown file can show the images in one
+  (Nextcloud Text's `.attachments.<id>`), never published.
 - `THEME_DIR` must start with `./` or `/`: Docker Compose treats a bare name as a named volume.
 - `assets/screenshots/` and `assets/drawings/` are generated from the live foldocs.com site;
   don't edit them by hand.

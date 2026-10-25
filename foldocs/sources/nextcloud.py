@@ -2,7 +2,9 @@
 over the public WebDAV endpoint: a PROPFIND to list a folder, a GET to download a file. The share
 token is the user name and the share's password, if it has one, the password: no account needed.
 
-Nextcloud keeps documents as files, so pages are Word files (.docx), read as Docs are. What Drive
+Nextcloud keeps documents as files, so pages are Word files (.docx) or Markdown files (.md), as
+its Text app writes them; the images a Markdown file shows are in a hidden folder beside it
+(.attachments.<id>), listed with the rest. What Drive
 has and a share doesn't: file descriptions, so photos get no captions. A file's creation time is
 used where Nextcloud knows it, else its upload time, else its last change.
 """
@@ -15,8 +17,9 @@ from urllib.parse import quote, unquote, urlencode, urlparse
 
 import requests
 
+from ..formats import described, format_for
 from ..xmlsafe import untrusted_xml
-from . import TIMEOUT, Entry, Folder, Provider, WordFolder, body, counted, publishable
+from . import TIMEOUT, Entry, Folder, Provider, body, counted
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +77,7 @@ def _in_share(path: str) -> str:
     return unquote(path.split("/public.php/webdav", 1)[-1]).rstrip("/")
 
 
-class Nextcloud(WordFolder):
+class Nextcloud:
     kind = "nextcloud"
     embed = ""  # Nextcloud forbids showing its pages in another site's frame
     max_items: int | None = None
@@ -128,7 +131,7 @@ class Nextcloud(WordFolder):
         return self._walk([])
 
     def _walk(self, path: list[str]) -> tuple[list[Entry], list[Folder]]:
-        """All Word files and images under a folder, and the folders they are in; depth first."""
+        """All documents and images under a folder, and the folders they are in; depth first."""
         entries, folders = [], []
         for name, props in self._children(path):
             # The file ID survives renames and moves. It names the file's cache entry, so only digits,
@@ -150,15 +153,19 @@ class Nextcloud(WordFolder):
                     warned.add(file_id)
                     log.warning("Skipping %s: an OpenDocument file; save it as Word (.docx) to publish it", where)
                 continue
-            if not publishable(mime):
-                log.debug("Skipping %s (%s): not a Word file or image", where, mime)
+            if not (found := format_for(mime, name)):
+                log.debug("Skipping %s (%s): not %s", where, mime, described())
                 continue
             # A date the server leaves out or garbles counts as unknown: one file never stops the sync.
             modified = _http_date(props.get("getlastmodified", ""))
             created = _timestamp(props.get("creation_time", "")) or _timestamp(props.get("upload_time", ""))
             modified = modified or created or EPOCH
             created = created or modified
-            entries.append(Entry(id=file_id, name=name, mime=mime, path=path, created=created, modified=modified))
+            entries.append(
+                Entry(
+                    id=file_id, name=name, mime=mime, path=path, created=created, modified=modified, format=found.name
+                )
+            )
         return entries, folders
 
     def download(self, entry: Entry) -> bytes:
