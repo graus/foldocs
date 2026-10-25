@@ -12,8 +12,8 @@ lose and why (`lost`, `why`), and the encoding its text is really in (`encoding`
 that no word is lost.
 
 Every case, and variants of it with tags and attributes dropped, repeated, swapped and cut short,
-must also hold to what every page holds to (check_page). Then all of them are synced together and
-built in every bundled theme.
+must also hold to what every page holds to (check_page); the variants run in CI, or with CI=1.
+Then all of them are synced together and built in every bundled theme.
 """
 
 import copy
@@ -456,6 +456,8 @@ def _mutate_lines(data: bytes, rng: random.Random) -> bytes:
 VARIANTS = 4
 
 
+# They take most of the corpus's time, for bugs few files have: run in CI, or here with CI=1.
+@pytest.mark.skipif(not os.environ.get("CI"), reason="random variants run in CI (CI=1 to run them here)")
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.name)
 def test_variants_of_every_case_hold(case):
     for seed in range(VARIANTS):
