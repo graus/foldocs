@@ -7,6 +7,7 @@ documentation; this file is what it doesn't say.
 
 ```sh
 uv run pytest                                      # all tests; every bundled theme is rendered too
+UPDATE_CORPUS=1 uv run pytest tests/test_corpus.py  # accept changed pages of the corpus; review the diff
 uv run ruff check . && uv run ruff format .        # CI fails on either
 uv run foldocs check-theme [DIR]                   # tokens + WCAG AA contrast, light and dark
 uv run --env-file .env foldocs sync | build | loop | serve   # .env: see .env.example

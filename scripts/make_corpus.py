@@ -10,6 +10,7 @@ made with scripts/office_corpus.py; Google Docs exports are recorded with script
 
 import io
 import random
+import re
 import struct
 import sys
 import zipfile
@@ -57,9 +58,21 @@ def p(text: str, style: str = "") -> str:
     return f'<w:p>{props}<w:r><w:t xml:space="preserve">{text}</w:t></w:r></w:p>'
 
 
-def save(document, case: str) -> bytes:
+def save(document) -> bytes:
     buf = io.BytesIO()
     document.save(buf)
+    return rezip(buf.getvalue(), {})
+
+
+def rezip(data: bytes, files: dict[str, bytes]) -> bytes:
+    """A Word file with some of its parts replaced, dated the same every time: making a case again
+    changes nothing unless the case changed."""
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        parts = {name: z.read(name) for name in z.namelist()} | files
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for name, content in parts.items():
+            z.writestr(zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0)), content, zipfile.ZIP_DEFLATED)
     return buf.getvalue()
 
 
@@ -73,11 +86,7 @@ def with_parts(data: bytes, parts: dict[str, bytes], rels: list[str], types: lis
     files["[Content_Types].xml"] = files["[Content_Types].xml"].replace(
         b"</Types>", "".join(types).encode() + b"</Types>"
     )
-    buf = io.BytesIO()
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        for name, content in files.items():
-            z.writestr(name, content)
-    return buf.getvalue()
+    return rezip(data, files)
 
 
 def new(title: str) -> docx.Document:
@@ -117,7 +126,7 @@ def word_tracked_changes() -> bytes:
         '<w:p><w:r><w:rPr><w:b/><w:rPrChange w:id="9" w:author="Jan Jansen" w:date="2026-10-01T10:00:00Z">'
         "<w:rPr/></w:rPrChange></w:rPr><w:t>Now bold.</w:t></w:r></w:p>",
     )
-    return save(d, "tracked-changes")
+    return save(d)
 
 
 def word_comments() -> bytes:
@@ -127,7 +136,15 @@ def word_comments() -> bytes:
     para.add_run(" from the house.")
     d.add_comment(run, text="Is it not fifteen?", author="Jan Jansen", initials="JJ")
     d.add_paragraph("Bring a coat.")
-    return save(d, "comments")
+    return dated_comments(save(d))
+
+
+def dated_comments(data: bytes) -> bytes:
+    """A Word file whose comments are dated the same every time (python-docx dates them now)."""
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        comments = z.read("word/comments.xml")
+    fixed = re.sub(rb'w:date="[^"]*"', b'w:date="2026-01-01T00:00:00Z"', comments)
+    return rezip(data, {"word/comments.xml": fixed})
 
 
 TEXT_BOX = """
@@ -156,7 +173,7 @@ def word_text_box() -> bytes:
     d = new("Text box")
     add(d, TEXT_BOX)
     d.add_paragraph("Last line.")
-    return save(d, "text-box")
+    return save(d)
 
 
 def word_header_footer() -> bytes:
@@ -165,7 +182,7 @@ def word_header_footer() -> bytes:
     section.header.paragraphs[0].text = "Draft, Jan Jansen"
     section.footer.paragraphs[0].text = "Page footer: example.com"
     d.add_paragraph("The body of the page.")
-    return save(d, "header-footer")
+    return save(d)
 
 
 def numbering(document) -> tuple[int, int]:
@@ -213,7 +230,7 @@ def word_numbering_without_list_style() -> bytes:
             f'<w:p><w:pPr><w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="{level}"/><w:numId w:val="{num}"/>'
             f"</w:numPr></w:pPr><w:r><w:t>{text}</w:t></w:r></w:p>",
         )
-    return save(d, "numbering-without-list-style")
+    return save(d)
 
 
 def word_dutch_styles() -> bytes:
@@ -232,7 +249,7 @@ def word_dutch_styles() -> bytes:
     d.add_paragraph("Dag één", style="Kop 2")
     d.add_paragraph("Regen, en toen zon.")
     d.add_paragraph("Wie niet waagt, die niet wint.", style="Citaat")
-    return save(d, "dutch-styles")
+    return save(d)
 
 
 TOC_ENTRY = (
@@ -276,7 +293,7 @@ def word_table_of_contents() -> bytes:
             f'<w:r><w:t>{text}</w:t></w:r><w:bookmarkEnd w:id="{anchor[-1]}"/></w:p>',
         )
         d.add_paragraph(f"Text about {text.lower()}.")
-    return save(d, "table-of-contents")
+    return save(d)
 
 
 FOOTNOTES = (
@@ -316,7 +333,7 @@ def word_footnotes() -> bytes:
         "</Relationships>"
     )
     return with_parts(
-        save(d, "footnotes"),
+        save(d),
         {
             "word/footnotes.xml": FOOTNOTES.encode(),
             "word/endnotes.xml": ENDNOTES.encode(),
@@ -356,7 +373,7 @@ def word_tables() -> bytes:
     t3.cell(0, 1).paragraphs[0].text = "Coat"
     t3.cell(0, 1).add_paragraph("Boots", style="List Bullet")
     t3.cell(0, 1).add_paragraph("Hat", style="List Bullet")
-    return save(d, "tables")
+    return save(d)
 
 
 def word_images() -> bytes:
@@ -373,7 +390,7 @@ def word_images() -> bytes:
     table = d.add_table(rows=1, cols=2)
     table.cell(0, 0).text = "In a table:"
     table.cell(0, 1).paragraphs[0].add_run().add_picture(io.BytesIO(png(16, 16, (120, 40, 160))), width=Inches(1))
-    return save(d, "images")
+    return save(d)
 
 
 def word_fields_and_symbols() -> bytes:
@@ -417,7 +434,7 @@ def word_fields_and_symbols() -> bytes:
         '<w:p><w:bookmarkStart w:id="100" w:name="_Ref100"/><w:r><w:t>The details: two days.</w:t></w:r>'
         '<w:bookmarkEnd w:id="100"/></w:p>',
     )
-    return save(d, "fields-and-symbols")
+    return save(d)
 
 
 def word_scripts_and_emoji() -> bytes:
@@ -432,7 +449,7 @@ def word_scripts_and_emoji() -> bytes:
     d.add_paragraph("日本語のテキスト、そして中文。")
     d.add_paragraph("Combining: été; zero​width; non breaking.")
     d.add_paragraph("Ligatures ﬁ and ﬂ, math 𝑥² + 𝑦².")
-    return save(d, "scripts-and-emoji")
+    return save(d)
 
 
 def word_headings_out_of_order() -> bytes:
@@ -449,11 +466,11 @@ def word_headings_out_of_order() -> bytes:
     d.add_heading("Notes", level=2)
     d.add_heading("Notes", level=2)
     d.add_paragraph("Twice the same heading.")
-    return save(d, "headings-out-of-order")
+    return save(d)
 
 
 def word_empty() -> bytes:
-    return save(docx.Document(), "empty")
+    return save(docx.Document())
 
 
 def word_only_whitespace() -> bytes:
@@ -461,7 +478,7 @@ def word_only_whitespace() -> bytes:
     for text in ("", " ", "\t", " "):
         d.add_paragraph(text)
     d.add_page_break()
-    return save(d, "only-whitespace")
+    return save(d)
 
 
 def word_sample() -> bytes:
@@ -505,7 +522,7 @@ def word_sample() -> bytes:
     d.add_comment(run, text="Or nine?", author="Jan Jansen", initials="JJ")
     code = d.add_paragraph().add_run("FOLDER_URL")
     code.font.name = "Courier New"
-    return save(d, "sample")
+    return dated_comments(save(d))
 
 
 WORD = {
