@@ -13,9 +13,9 @@ from foldocs.sources import DocExport, Entry
 DOC = "application/vnd.google-apps.document"
 
 
-def jpeg() -> bytes:
+def jpeg(color="orange") -> bytes:
     buf = io.BytesIO()
-    Image.new("RGB", (40, 30), "orange").save(buf, "JPEG")
+    Image.new("RGB", (40, 30), color).save(buf, "JPEG")
     return buf.getvalue()
 
 
@@ -242,9 +242,10 @@ class FakeShare(FakeDrive):
 
     def __init__(self, entries, files):
         super().__init__(entries)
-        self.files = files
+        self.files, self.downloads = files, []
 
     def download(self, entry):
+        self.downloads.append(entry.name)
         return self.files[entry.name]
 
 
@@ -274,3 +275,74 @@ def test_hidden_files_and_folders_are_not_published(tmp_path):
     sync.sync(s, FakeShare([shown, *hidden], {"shown.md": b"Hi", "draft.md": b"x", ".secret.md": b"x"}))
     assert [e["name"] for e in cache.read_json(s.cache_dir / "manifest.json")] == ["shown.md"]
     assert cache.Cache(s.cache_dir).published() == {"shown-md"}
+
+
+def test_a_page_is_redone_when_an_image_it_shows_changes(tmp_path):
+    """The Markdown file stays as it is; the photo it links to is replaced, or deleted."""
+    s = settings(tmp_path)
+    post = markdown("post.md", ["writing"])
+    photo = Entry("p", "a.jpg", "image/jpeg", ["writing", ".attachments.1"], "t", "t1")
+    share = FakeShare([post, photo], {"post.md": b"![](.attachments.1/a.jpg)", "a.jpg": jpeg()})
+    sync.sync(s, share)
+    content = cache.read_json(s.cache_dir / "content" / "post-md.json")
+    assert content["uses"] == {"writing/.attachments.1/a.jpg": ["p", "t1"]}
+    before = content["cover"]["variants"][0]["file"]
+
+    share.downloads = []
+    assert sync.sync(s, share) is False and share.downloads == []  # nothing changed: nothing read
+
+    share.files["a.jpg"], share.entries = jpeg("navy"), [post, Entry(**{**photo.__dict__, "modified": "t2"})]
+    assert sync.sync(s, share) is True
+    content = cache.read_json(s.cache_dir / "content" / "post-md.json")
+    assert content["uses"] == {"writing/.attachments.1/a.jpg": ["p", "t2"]}
+    assert content["cover"]["variants"][0]["file"] != before  # a new name: no browser keeps the old one
+
+    share.entries = [post]
+    assert sync.sync(s, share) is True
+    assert "<img" not in cache.read_json(s.cache_dir / "content" / "post-md.json")["html"]
+
+
+def test_a_page_is_redone_when_another_file_takes_its_images_place_or_one_turns_up(tmp_path):
+    s, settled = settings(tmp_path), "2026-01-01T00:00:00Z"
+    post = Entry("post", "post.md", "text/markdown", ["writing"], settled, settled)
+    files = {"post.md": b"![](a.jpg) ![](b.jpg)", "a.jpg": jpeg(), "a2.jpg": jpeg("navy"), "b.jpg": jpeg("teal")}
+    a = Entry("a", "a.jpg", "image/jpeg", ["writing"], settled, settled)
+    share = FakeShare([post, a], files)
+    sync.sync(s, share)
+    content = cache.read_json(s.cache_dir / "content" / "post.json")
+    assert content["html"].count("<img") == 1 and content["uses"]["writing/b.jpg"] is None
+
+    # a.jpg renamed away (the same file, unchanged), a new one uploaded under its name
+    replaced = Entry("a2", "a.jpg", "image/jpeg", ["writing"], settled, settled)
+    share.entries = [post, Entry(**{**a.__dict__, "name": "old.jpg"}), replaced]
+    share.files["a.jpg"] = files["a2.jpg"]
+    assert sync.sync(s, share) is True
+    assert cache.read_json(s.cache_dir / "content" / "post.json")["uses"]["writing/a.jpg"] == ["a2", settled]
+
+    share.entries.append(Entry("b", "b.jpg", "image/jpeg", ["writing"], settled, settled))  # there at last
+    assert sync.sync(s, share) is True
+    assert cache.read_json(s.cache_dir / "content" / "post.json")["html"].count("<img") == 2
+
+
+def test_a_page_waits_for_an_image_it_shows_to_settle(tmp_path):
+    s, settled, fresh = settings(tmp_path), "2026-01-01T00:00:00Z", datetime.now(UTC).isoformat()
+    post = Entry("post", "post.md", "text/markdown", ["writing"], settled, settled)
+    photo = Entry("p", "a.jpg", "image/jpeg", ["writing"], settled, settled)
+    share = FakeShare([post, photo], {"post.md": b"![](a.jpg)", "a.jpg": jpeg()})
+    sync.sync(s, share, settle=300)
+    share.entries, share.downloads = [post, Entry(**{**photo.__dict__, "modified": fresh})], []
+    assert sync.sync(s, share, settle=300) is False and "post.md" not in share.downloads  # still being replaced
+    assert sync.sync(s, share, settle=0) is True
+
+
+def test_a_page_that_failed_is_tried_again_when_a_file_it_looked_for_changes(tmp_path):
+    s, settled = settings(tmp_path), "2026-01-01T00:00:00Z"
+    post = Entry("post", "post.md", "text/markdown", ["writing"], settled, settled)
+    share = FakeShare([post], {"post.md": b"![](a.jpg)"})
+    sync._failed["post"] = (settled, {"writing/a.jpg": None})  # as a failure after looking for a.jpg leaves it
+    sync.sync(s, share)
+    assert share.downloads == []  # nothing changed: not tried again
+    share.entries.append(Entry("a", "a.jpg", "image/jpeg", ["writing"], settled, settled))
+    share.files["a.jpg"] = jpeg()
+    sync.sync(s, share)
+    assert share.downloads[0] == "post.md"

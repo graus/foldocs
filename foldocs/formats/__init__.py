@@ -44,6 +44,9 @@ class Reading:
     entry: Entry
     source: Source
     tree: dict[tuple[str, ...], Entry] = field(default_factory=dict)
+    # Every path it looked up in the folder, and what it found there (see found()): the page is
+    # redone when that changes, a file there replaced, changed, gone or there at last.
+    uses: dict[str, list[str] | None] = field(default_factory=dict)
 
     def download(self, other: Entry | None = None) -> bytes:
         """The file itself, or another file in the folder it shows."""
@@ -52,7 +55,7 @@ class Reading:
     def linked(self, src: str) -> Entry | None:
         """The file a link in the document leads to by a path from the document's folder
         (photo.jpg, ../photos/photo.jpg, .attachments.12/photo.jpg); None if src is no such path,
-        or one that leads out of the folder."""
+        one that leads out of the folder, or one with no file (yet). Recorded in `uses`."""
         parts = urlparse(src)
         if parts.scheme or parts.netloc or not parts.path or src.startswith(("/", "#")):
             return None
@@ -64,7 +67,16 @@ class Reading:
                 path.pop()
             elif name not in ("", "."):
                 path.append(name)
+        key = "/".join(path)
+        self.uses[key] = found(self.tree, key)
         return self.tree.get(tuple(path))
+
+
+def found(tree: dict[tuple[str, ...], Entry], path: str) -> list[str] | None:
+    """The file at a path in the folder ("writing/photo.jpg"), as a document's content records
+    it: its ID and modification time; None if there is none."""
+    entry = tree.get(tuple(path.split("/")))
+    return [entry.id, entry.modified] if entry else None
 
 
 @dataclass

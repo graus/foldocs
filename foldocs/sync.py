@@ -2,7 +2,8 @@
 
 The cache holds a manifest of the tree (names, folders, dates: cheap to list every time)
 and, per file, its processed content, which is only redone when the file's modification time
-changes. Images are written straight into the site's media folder.
+changes, or that of a file it shows (a Markdown file's images). Images are written straight into
+the site's media folder.
 
 Documents save while you type (Google Docs, Nextcloud's editors), so a file can be left to
 settle first: a change is only picked up once the file has been untouched for `settle` seconds,
@@ -22,7 +23,7 @@ import requests
 from . import convert, design, images
 from .cache import Cache, media_name, write_json
 from .config import Settings, role
-from .formats import Document, Reading
+from .formats import Document, Reading, found
 from .sources import Entry, Folder, Source, open_source
 
 log = logging.getLogger(__name__)
@@ -30,9 +31,10 @@ log = logging.getLogger(__name__)
 # Bump when processing changes, to redo every file on the next sync.
 VERSION = 16
 
-# Files that couldn't be processed, and how they were then (their modification time): one is
-# tried again once it changes, not every minute. A failure to reach the service is tried again.
-_failed: dict[str, str] = {}
+# Files that couldn't be processed, and how they were then (their modification time, and what
+# they found in the folder): one is tried again once that changes, not every minute. A failure to
+# reach the service is tried again.
+_failed: dict[str, tuple[str, dict]] = {}
 
 
 def _passing(e: Exception) -> bool:
@@ -82,29 +84,33 @@ def _update(
     changed = waiting = 0
     for entry in entries:
         cached = cache.content(entry.id)
-        unchanged = cached and cached["modified"] == entry.modified and cached["version"] == VERSION
+        uses = cached.get("uses", {}) if cached else {}
+        unchanged = (
+            cached and cached["modified"] == entry.modified and cached["version"] == VERSION and _same(uses, tree)
+        )
         # A design Doc is processed differently; moved into or out of the root folder (or
         # renamed) it is processed again, though the file itself didn't change.
         if unchanged and cached.get("role") == _processing_role(entry):
             continue
-        if _failed.get(entry.id) == entry.modified:
+        if (failed := _failed.get(entry.id)) and failed[0] == entry.modified and _same(failed[1], tree):
             continue
         # A time in the future (a skewed clock on the uploading machine) counts as settled.
-        if settle and 0 <= (now - datetime.fromisoformat(entry.modified)).total_seconds() < settle:
+        if settle and 0 <= (now - _touched(entry, uses, tree)).total_seconds() < settle:
             waiting += 1
             continue
         log.info("Processing %s", "/".join(entry.path + [entry.name]))
         name = media_name(entry.id)
         media, staging = settings.media_dir / name, settings.media_dir / f"{name}.new"
         shutil.rmtree(staging, ignore_errors=True)
+        file = Reading(entry, source, tree)
         try:
-            content = _process(Reading(entry, source, tree), staging)
+            content = _process(file, staging)
         except Exception as e:
             # Keep the previous version, images included.
             log.exception("Could not process %s (%s)", entry.name, entry.id)
             shutil.rmtree(staging, ignore_errors=True)
             if not _passing(e):
-                _failed[entry.id] = entry.modified
+                _failed[entry.id] = (entry.modified, file.uses)
             continue
         _failed.pop(entry.id, None)
         shutil.rmtree(media, ignore_errors=True)
@@ -113,6 +119,17 @@ def _update(
         write_json(cache.content_path(entry.id), content)
         changed += 1
     return changed, waiting
+
+
+def _same(uses: dict[str, list[str] | None], tree: Tree) -> bool:
+    """Whether every path a document looked up in the folder still has what it found there."""
+    return all(found(tree, path) == then for path, then in uses.items())
+
+
+def _touched(entry: Entry, uses: dict[str, list[str] | None], tree: Tree) -> datetime:
+    """When the document last changed, or a file it shows: that settles too."""
+    files = [entry, *(e for path in uses if (e := tree.get(tuple(path.split("/")))))]
+    return max(datetime.fromisoformat(e.modified) for e in files)
 
 
 def _held(cache: Cache, entries: list[Entry], previous: list[dict]) -> list[dict]:
@@ -168,7 +185,8 @@ def _processing_role(entry: Entry) -> str | None:
 def _process(file: Reading, out_dir: Path) -> dict:
     """The file's content for the cache; its images go to out_dir, later served at /media/<name>/."""
     entry = file.entry
-    # Media file names carry a version token, so they can be cached forever.
+    # Media file names carry a version token, so they can be cached forever: for a photo its own
+    # modification time; for a document's image its content, which can change while the document doesn't.
     token = hashlib.sha1(entry.modified.encode()).hexdigest()[:8]
     base = f"/media/{media_name(entry.id)}/"
     content = {"modified": entry.modified, "version": VERSION}
@@ -184,7 +202,8 @@ def _process(file: Reading, out_dir: Path) -> dict:
     def image(src: str) -> dict | None:
         nonlocal count
         try:
-            info = images.process(text.image(src), out_dir, f"{count + 1}-{token}")
+            data = text.image(src)
+            info = images.process(data, out_dir, f"{count + 1}-{hashlib.sha1(data).hexdigest()[:8]}")
         except Exception as e:  # left out: one image never keeps a document off the site
             if _passing(e):
                 raise  # the whole document is tried again, rather than published without it
@@ -207,4 +226,5 @@ def _process(file: Reading, out_dir: Path) -> dict:
         "cover": doc.images[0] if doc.images else None,
         "links": doc.links,
         "first": doc.first,
+        "uses": file.uses,
     }
