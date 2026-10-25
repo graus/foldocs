@@ -20,7 +20,8 @@ from . import DocText, Reading, inline_image
 
 MARKDOWN = MarkdownIt("commonmark", {"html": True}).enable(["table", "strikethrough"])
 COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
-UTF8_LETTER = re.compile(rb"[\xc2-\xf4][\x80-\xbf]+")  # a letter beyond ASCII, as UTF-8 writes it
+# A letter beyond ASCII as UTF-8 writes it: two, three or four bytes
+UTF8_LETTER = re.compile(rb"[\xc2-\xdf][\x80-\xbf]|[\xe0-\xef][\x80-\xbf]{2}|[\xf0-\xf4][\x80-\xbf]{3}")
 
 
 def _html_as_text(self, tokens, idx, options, env) -> str:
@@ -33,10 +34,14 @@ def _html_as_text(self, tokens, idx, options, env) -> str:
 
 
 def _comment_block(state, start: int, end: int, silent: bool) -> bool:
-    """Of HTML blocks, only a comment: other HTML is text in the paragraph it is in, so the lines
-    after a tag (a README's <p align="center">) are read as Markdown, as if HTML were off."""
+    """Of HTML blocks, only a comment that ends its line: other HTML is text in the paragraph it is
+    in, so the lines after a tag (a README's <p align="center">) are read as Markdown, as if HTML
+    were off; and so is what follows a comment on its line (<!--more--> **Read on**)."""
     begin = state.bMarks[start] + state.tShift[start]
-    return state.src.startswith("<!--", begin) and html_block(state, start, end, silent)
+    if not state.src.startswith("<!--", begin) or (close := state.src.find("-->", begin)) < 0:
+        return False
+    rest = state.src[close + 3 :].split("\n", 1)[0]
+    return not rest.strip() and html_block(state, start, end, silent)
 
 
 MARKDOWN.block.ruler.at("html_block", _comment_block, {"alt": ["paragraph", "reference", "blockquote"]})
@@ -81,7 +86,9 @@ def decode(data: bytes) -> str:
         try:
             text = data.decode("utf-8-sig")
         except UnicodeDecodeError:  # UTF-8 with a bad byte or two (a paste), or another encoding
-            text = data.decode("utf-8-sig" if UTF8_LETTER.search(data) else "cp1252", errors="replace")
+            utf8 = data.decode("utf-8-sig", errors="replace")
+            mostly_utf8 = len(UTF8_LETTER.findall(data)) > utf8.count("\ufffd")
+            text = utf8 if mostly_utf8 else data.decode("cp1252", errors="replace")
     if "\0" in text:
         raise ValueError("not a text file, though named a Markdown file")
     return text.replace("\r\n", "\n")
@@ -95,12 +102,12 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
     if m := TOML_FRONT_MATTER.match(text):
         try:
             return _texts(tomllib.loads(m[1])), text[m.end() :]
-        except tomllib.TOMLDecodeError:
+        except (tomllib.TOMLDecodeError, RecursionError):  # RecursionError: nested past Python's depth
             return {}, text
     if text.startswith("{"):
         try:
             data, end = json.JSONDecoder().raw_decode(text)
-        except ValueError:
+        except (ValueError, RecursionError):
             return {}, text
         line_end = re.compile(r"[ \t]*(\n|\Z)").match(text, end)  # the object ends its line
         if not isinstance(data, dict) or not line_end:

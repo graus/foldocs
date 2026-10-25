@@ -61,15 +61,6 @@ class Reading:
         """The file a link in the document leads to by a path from the document's folder
         (photo.jpg, ../photos/photo.jpg, .attachments.12/photo.jpg); None if src is no such path,
         one that leads out of the folder, or one with no file (yet). Recorded in `uses`."""
-        path = self._path(src)
-        if path is None:
-            return None
-        self.uses[path] = found(self.tree, path)
-        return self.tree.get(path)
-
-    def _path(self, src: str) -> tuple[str, ...] | None:
-        """The path in the folder a link leads to from the document's folder, or None if it is no
-        path from there, or one that leads out of the folder."""
         parts = urlparse(src)
         if parts.scheme or parts.netloc or not parts.path or src.startswith(("/", "#")):
             return None
@@ -81,7 +72,8 @@ class Reading:
                 path.pop()
             elif name not in ("", "."):
                 path.append(name)
-        return tuple(path)
+        self.uses[tuple(path)] = found(self.tree, path)
+        return self.tree.get(tuple(path))
 
     def used(self) -> list[list]:
         """`uses`, as a document's content records it: [path, found] pairs."""
@@ -223,13 +215,17 @@ def take_titles(body: Tag) -> tuple[str | None, str | None]:
     return found[0], found[1]
 
 
+SEPARATOR = re.compile(r"[\s·•‧|–—,]*")  # what goes between links in a row of them
+
+
 def code_by_font_only(body: Tag) -> None:
     """Text a format made code for its monospace font, where the font is only its look: in a
-    heading, as a link's text, or punctuation alone. As text pasted from a web page comes, or a
-    heading in a typewriter font: no file name or setting, which is what code is for."""
+    heading, as a link's text, or a separator alone (the dots between links). As text pasted from a
+    web page comes, or a heading in a typewriter font: no file name or setting, which is what code is
+    for. Code of other punctuation ({}, ->, a lone } in a listing) stays code."""
     for code in body.find_all("code"):
         heading = code.find_parent(re.compile(r"h[1-6]"))
-        if heading or code.find("a") or code.find_parent("a") or not re.search(r"\w", code.get_text()):
+        if heading or code.find("a") or code.find_parent("a") or SEPARATOR.fullmatch(code.get_text()):
             code.unwrap()
 
 

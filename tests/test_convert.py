@@ -236,7 +236,7 @@ def test_a_word_file_with_a_dtd_anywhere_is_refused(tmp_path, part):
     with pytest.raises(ElementTree.ParseError):
         word.word_html(data)
     if part == "word/fontTable.xml":
-        assert word._part(data, part) is None
+        assert word._parts(data, part) == [None]
 
 
 def test_a_word_file_whose_document_has_another_name_is_checked_too(tmp_path):
@@ -492,9 +492,34 @@ def test_two_line_breaks_are_a_blank_line_still():
     assert convert_body("<p>one<br><br>two</p>").html == "<p>one<br/><br/>two</p>"
 
 
-def test_a_heading_keeps_its_id_whatever_bookmark_comes_first():
-    doc = convert.convert('<p><a href="#notes">go</a> <a id="notes"></a>mark</p><h2>Notes</h2>', image, attrs, "T")
-    assert doc.html == '<p><a href="#notes">go</a> mark</p>\n<h2 id="notes">Notes</h2>'
+def test_an_id_the_document_gives_is_kept_and_a_heading_makes_way():
+    """A bookmark's or footnote's id is what links point at; a heading's is made up. Either order."""
+    for html in [
+        '<p><a href="#notes">go</a> <a id="notes"></a>mark</p><h2>Notes</h2>',
+        '<h2>Notes</h2><p><a href="#notes">go</a> <a id="notes"></a>mark</p>',
+    ]:
+        doc = convert.convert(html, image, attrs, "T")
+        assert '<h2 id="notes-2">Notes</h2>' in doc.html and '<a id="notes"></a>mark' in doc.html, html
+        assert '<a href="#notes">go</a>' in doc.html
+    footnotes = (
+        '<h2>Footnote 1</h2><p>x<sup><a href="#footnote-1">[1]</a></sup></p><ol><li id="footnote-1">A note.</li></ol>'
+    )
+    doc = convert.convert(footnotes, image, attrs, "T")
+    assert '<ol><li id="footnote-1">A note.</li></ol>' in doc.html and 'id="footnote-1-2"' in doc.html
+
+
+def test_a_link_to_a_place_left_off_the_page_leads_nowhere():
+    """A bookmark in the heading taken out as the title, or in a paragraph of an image alone."""
+    doc = convert_body(
+        '<h1><a id="top"></a>Title</h1><p><a id="bm"></a><img src="a.png"></p>'
+        '<p><a href="#top">t</a> <a href="#bm">b</a></p>'
+    )
+    assert '<a href="#">t</a> <a href="#">b</a>' in doc.html
+
+
+def test_a_digit_that_isnt_ascii_is_no_number():
+    html = convert_body('<table><tr><td colspan="²">a</td></tr></table><ol start="³"><li>x</li></ol>').html
+    assert "<td>a</td>" in html and "<ol><li>x</li></ol>" in html
 
 
 def test_a_utf8_file_with_a_bad_byte_keeps_its_other_letters():
@@ -517,3 +542,31 @@ def test_a_word_file_that_wont_unpack_says_so(tmp_path):
     data[start : start + 8] = b"\xff" * 8  # its packed bytes broken
     with pytest.raises(ValueError, match="can be read"):
         word.word_html(bytes(data))
+
+
+def test_code_of_punctuation_stays_code():
+    mono = 'style="font-family:&quot;Courier New&quot;"'
+    doc = convert_body(
+        f"<p>Use <span {mono}>-&gt;</span> or <span {mono}>{{}}</span>.</p><p><span {mono}>}}</span></p>"
+    )
+    assert doc.html == "<p>Use <code>-&gt;</code> or <code>{}</code>.</p>\n<p><code>}</code></p>"
+
+
+def test_markdown_after_a_comment_on_its_line_is_markdown():
+    assert (
+        convert_markdown("Intro.\n\n<!--more--> **Read on**\n").html == "<p>Intro.</p>\n<p><strong>Read on</strong></p>"
+    )
+
+
+def test_windows_1252_with_curly_quotes_is_not_taken_for_utf8():
+    assert markdown.decode("café’s naïve été".encode("cp1252")) == "café’s naïve été"
+
+
+def test_front_matter_nested_past_pythons_depth_is_text():
+    for text in ['{"a":' + "[" * 100_000, "+++\na = " + "[" * 100_000 + "\n+++\nBody\n"]:
+        assert markdown.front_matter(text) == ({}, text)
+
+
+def test_only_a_page_number_ends_a_table_of_contents_entry():
+    text = word.clean('<p><a href="#_Toc1">Intro\t12</a> <a href="#_Toc2">Preface\tiv</a> <a href="#x">Go\tmid</a></p>')
+    assert [a.get_text() for a in text.body.find_all("a")] == ["Intro", "Preface", "Go\tmid"]
