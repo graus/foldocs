@@ -241,6 +241,21 @@ def test_a_site_without_optional_pages_renders_too(tmp_path):
 
 
 @pytest.mark.parametrize("theme_dir", theme.bundled(), ids=lambda p: p.name)
+def test_a_folder_of_pages_and_no_sections_renders(tmp_path, theme_dir):
+    """A first try often is: the menu then opens with a page, with no section before it."""
+    settings = make_site(
+        tmp_path,
+        [
+            (entry("i", "intro", []), doc("<p>Hi.</p>")),
+            (entry("a", "About", []), doc("<p>Bio.</p>")),
+            (entry("m", "me.jpg", [], "image"), {"image": IMAGE}),
+        ],
+    )
+    render.build(replace(settings, theme_dir=theme_dir))
+    assert (settings.public_dir / "about" / "index.html").is_file()
+
+
+@pytest.mark.parametrize("theme_dir", theme.bundled(), ids=lambda p: p.name)
 def test_every_bundled_theme_renders(tmp_path, theme_dir):
     settings = make_site(
         tmp_path,
