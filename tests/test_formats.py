@@ -153,6 +153,8 @@ def test_a_link_to_another_file_in_the_folder_is_kept_for_the_build():
     assert file.page_link("Plan%20van%20aanpak.md#stap-1") == "folder:/writing/Plan%20van%20aanpak.md?id=p#stap-1"
     assert file.page_link("../photos/") == "folder:/photos"  # a folder, or a file not there yet: by its path
     assert file.page_link("https://docs.example.org/p#heading=h.1") == "folder:/writing/Plan%20van%20aanpak.md?id=p"
-    for href in ["https://docs.example.org/elsewhere", "https://example.org/", "#top", "/about", "../../x.md"]:
+    # A Doc not in the folder yet: by its ID alone, for the build to find if it is there by then
+    assert file.page_link("https://docs.example.org/later") == "folder:/?id=later"
+    for href in ["https://example.org/", "#top", "/about", "../../x.md"]:
         assert file.page_link(href) is None, href
     assert file.uses == {}  # a page is no image: nothing to redo when it changes

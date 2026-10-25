@@ -14,11 +14,13 @@ import tomllib
 from bs4 import BeautifulSoup
 from markdown_it import MarkdownIt
 from markdown_it.common.utils import escapeHtml
+from markdown_it.rules_block import html_block
 
 from . import DocText, Reading, inline_image
 
 MARKDOWN = MarkdownIt("commonmark", {"html": True}).enable(["table", "strikethrough"])
 COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+UTF8_LETTER = re.compile(rb"[\xc2-\xf4][\x80-\xbf]+")  # a letter beyond ASCII, as UTF-8 writes it
 
 
 def _html_as_text(self, tokens, idx, options, env) -> str:
@@ -30,6 +32,14 @@ def _html_as_text(self, tokens, idx, options, env) -> str:
     return f"<p>{escapeHtml(html)}</p>\n" if token.type == "html_block" else escapeHtml(html)
 
 
+def _comment_block(state, start: int, end: int, silent: bool) -> bool:
+    """Of HTML blocks, only a comment: other HTML is text in the paragraph it is in, so the lines
+    after a tag (a README's <p align="center">) are read as Markdown, as if HTML were off."""
+    begin = state.bMarks[start] + state.tShift[start]
+    return state.src.startswith("<!--", begin) and html_block(state, start, end, silent)
+
+
+MARKDOWN.block.ruler.at("html_block", _comment_block, {"alt": ["paragraph", "reference", "blockquote"]})
 MARKDOWN.add_render_rule("html_block", _html_as_text)
 MARKDOWN.add_render_rule("html_inline", _html_as_text)
 
@@ -70,8 +80,8 @@ def decode(data: bytes) -> str:
     else:
         try:
             text = data.decode("utf-8-sig")
-        except UnicodeDecodeError:
-            text = data.decode("cp1252", errors="replace")
+        except UnicodeDecodeError:  # UTF-8 with a bad byte or two (a paste), or another encoding
+            text = data.decode("utf-8-sig" if UTF8_LETTER.search(data) else "cp1252", errors="replace")
     if "\0" in text:
         raise ValueError("not a text file, though named a Markdown file")
     return text.replace("\r\n", "\n")

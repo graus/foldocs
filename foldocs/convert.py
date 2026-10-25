@@ -30,7 +30,7 @@ LinkHandler = Callable[[str], str | None]
 
 # Links that may reach the site: web, mail and phone links, relative or in-page ones, and links to
 # another file in the folder, which the build makes that page's address.
-SAFE_LINK = re.compile(r"^(https?:|mailto:|tel:|#|/|folder:/)", re.IGNORECASE)
+SAFE_LINK = re.compile(r"^((?i:https?:|mailto:|tel:)|#|/|folder:/)")  # folder: as page_link writes it
 THEME_IDS = ("main", "page-h", "topics-h", "archive-title", "cta-title")  # ids the themes use on a page
 INLINE = {"strong", "em", "code", "s", "sup", "sub"}
 SAME_AS = {"b": "strong", "i": "em", "del": "s", "strike": "s"}  # the tags HTML has for the same thing
@@ -102,7 +102,7 @@ def _trim(tag: Tag) -> None:
 def _merge(tag: Tag) -> None:
     """Neighboring inline tags that are the same, as one: a Doc splits its text into runs, so a
     link or a bold word can come in pieces (and a link's piece can be a space alone)."""
-    for child in list(tag.find_all(True)):
+    for child in list(tag.find_all([*INLINE, "a"])):  # not <br>: two of them are a blank line
         while (
             child.parent is not None
             and isinstance(after := child.next_sibling, Tag)
@@ -142,7 +142,8 @@ class _Converter:
         self.images: list[dict] = []
         self.headings: list[tuple[Tag, str]] = []  # every heading, with its id in the document
         self.heading_ids: dict[str, str] = {}  # a heading's id in the document -> our slug
-        self.slugs: set[str] = set(THEME_IDS)  # every id on the page so far, and the themes' own
+        self.slugs: set[str] = set(THEME_IDS)  # the headings' ids so far, and the themes' own
+        self.anchors: dict[str, Tag] = {}  # the ids links and list items keep (see _anchor), and where
 
     def new(self, name: str, **attrs) -> Tag:
         return self.soup.new_tag(name, attrs=attrs)
@@ -160,6 +161,10 @@ class _Converter:
                 heading["id"] = self._unique(slugify(plain(heading), "section"))
                 if source_id:
                     self.heading_ids[source_id] = heading["id"]
+                if anchor := self.anchors.pop(heading["id"], None):  # a heading's id is its own
+                    del anchor["id"]
+                    if not anchor.has_attr("href"):  # a bookmark, now marking nothing
+                        anchor.unwrap()
         headings = [h for b in blocks for h in ([b] if HEADING.fullmatch(b.name) else b.find_all(HEADING))]
         if headings and (shift := min(int(h.name[1]) for h in headings) - 2) > 0:
             for h in headings:  # the highest heading left becomes an <h2>
@@ -168,7 +173,8 @@ class _Converter:
         for a in links:  # links within the document: to a heading by its new id; to nothing, nowhere
             if a["href"].startswith("#") and len(a["href"]) > 1:
                 target = a["href"][1:]
-                a["href"] = "#" + self.heading_ids.get(target, target if target in self.slugs else "")
+                here = target in self.slugs or target in self.anchors
+                a["href"] = "#" + self.heading_ids.get(target, target if here else "")
         return Doc(
             title=self.title,
             subtitle=self.subtitle,
@@ -279,14 +285,16 @@ class _Converter:
 
     def _link(self, a: Tag, dst: Tag) -> None:
         href = a.get("href")
-        if href is None and a.get("id"):  # a place a link leads to, such as a bookmark
+        if href is None:  # a place a link leads to, such as a bookmark, if it has an id it can keep
             tag = self.new("a")
             self._anchor(a, tag)
             if tag.get("id"):
                 dst.append(tag)
                 self._inline(a, tag)
-                return
-        href = (self.link and self.link(href.strip())) or href or ""
+            else:
+                self._inline(a, dst)
+            return
+        href = (self.link and self.link(href.strip())) or href
         if not SAFE_LINK.match(href.strip()):  # also drops javascript: and data: links; the text stays
             self._inline(a, dst)
             return
@@ -297,10 +305,11 @@ class _Converter:
 
     def _anchor(self, src: Tag, dst: Tag) -> None:
         """The id a link or list item has in the document, if a link may point at it (a footnote's,
-        say) and the page has no such id yet."""
-        if ANCHOR_ID.fullmatch(src.get("id", "")) and src["id"] not in self.slugs:
-            self.slugs.add(src["id"])
-            dst["id"] = src["id"]
+        say) and the page has no such id yet; a heading that gets the same id takes it (see run)."""
+        src_id = src.get("id", "")
+        if ANCHOR_ID.fullmatch(src_id) and src_id not in self.anchors and src_id not in THEME_IDS:
+            self.anchors[src_id] = dst
+            dst["id"] = src_id
 
     def _holder(self, el: Tag, name: str) -> Tag:
         """A tag that holds blocks: a quote, a list item, a table cell. A paragraph that opens it,

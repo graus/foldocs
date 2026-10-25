@@ -542,9 +542,11 @@ def test_links_to_other_files_in_the_folder_lead_to_their_pages():
     html = (
         '<p><a href="folder:/notes/Old%20name.md?id=a1#day">renamed</a> <a href="folder:/notes/New.md">new</a> '
         '<a href="folder:/notes">folder</a> <a href="folder:/gone.md?id=zz">gone</a> '
-        '<a href="folder:/gone.md" id="ref-1">marked</a></p>'
+        '<a href="folder:/gone.md" id="ref-1">marked</a> <a href="folder:/?id=a1">by ID</a> '
+        '<a href="folder:/?id=later">not yet</a></p>'
     )
     assert render.folder_links(html, destinations) == (
         '<p><a href="/notes/plan/#day">renamed</a> <a href="/notes/new/">new</a> '
-        '<a href="/notes/">folder</a> gone <a id="ref-1">marked</a></p>'
+        '<a href="/notes/">folder</a> gone <a id="ref-1">marked</a> <a href="/notes/plan/">by ID</a> '
+        "not yet</p>"
     )

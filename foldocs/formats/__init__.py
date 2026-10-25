@@ -17,9 +17,11 @@ format against this contract.
 from __future__ import annotations
 
 import base64
+import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import TYPE_CHECKING, ClassVar
 from urllib.parse import quote, unquote, urlparse
 
@@ -78,14 +80,20 @@ class Reading:
         if (path := self._path(href)) is not None:
             entry = self.tree.get(path)
         elif isinstance(self.source, Links) and (file_id := self.source.file_id(href)):
-            entry = next((e for e in self.tree.values() if e.id == file_id), None)
+            # A place in a Doc it links to is no place on its page; a file not in the folder (yet)
+            # is known by its ID alone, and the build finds it if it is there by then.
+            entry, fragment = self._by_id.get(file_id), ""
+            path = entry.where if entry else ()
             if entry is None:
-                return None
-            path, fragment = entry.where, ""  # a place in a Doc it links to is no place on its page
+                return f"folder:/?id={quote(file_id, safe='')}"
         else:
             return None
         address = "folder:/" + "/".join(quote(name, safe="") for name in path)
         return address + (f"?id={entry.id}" if entry else "") + (f"#{fragment}" if fragment else "")
+
+    @cached_property
+    def _by_id(self) -> dict[str, Entry]:
+        return {e.id: e for e in self.tree.values()}
 
     def _path(self, src: str) -> tuple[str, ...] | None:
         """The path in the folder a link leads to from the document's folder, or None if it is no
@@ -247,8 +255,6 @@ def code_by_font_only(body: Tag) -> None:
     """Text a format made code for its monospace font, where the font is only its look: in a
     heading, as a link's text, or punctuation alone. As text pasted from a web page comes, or a
     heading in a typewriter font: no file name or setting, which is what code is for."""
-    import re
-
     for code in body.find_all("code"):
         heading = code.find_parent(re.compile(r"h[1-6]"))
         if heading or code.find("a") or code.find_parent("a") or not re.search(r"\w", code.get_text()):

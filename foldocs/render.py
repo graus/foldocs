@@ -253,7 +253,7 @@ def folder_links(html: str, destinations: dict) -> str:
     for a in soup.find_all("a", href=re.compile("^folder:")):
         parts = urlsplit(a["href"])
         path = tuple(unquote(name) for name in parts.path.strip("/").split("/") if name)
-        url = destinations.get(parse_qs(parts.query).get("id", [""])[0]) or destinations.get(path)
+        url = destinations.get(parse_qs(parts.query).get("id", [""])[0]) or (destinations.get(path) if path else None)
         if url:
             a["href"] = url + (f"#{parts.fragment}" if parts.fragment else "")
         elif a.get("id"):

@@ -5,6 +5,7 @@ in a Docs export, and a bookmark on a heading (where a table of contents leads) 
 import io
 import re
 import zipfile
+import zlib
 from xml.etree import ElementTree
 
 import mammoth
@@ -62,8 +63,9 @@ def clean(html: str) -> DocText:
         for a in body.find_all("a", href=[f"#{b}" for b in bookmarks]):  # its other bookmarks
             a["href"] = f"#{heading.get('id', '')}"
     internal = [a for a in body.find_all("a", href=True) if a["href"].startswith("#")]
+    targets = {a["href"] for a in internal}
     for a in body.find_all("a", id=True, href=False):  # a bookmark no link leads to (Word's _GoBack)
-        if f"#{a['id']}" not in {link["href"] for link in internal}:
+        if f"#{a['id']}" not in targets:
             a.unwrap()
     for a in internal:  # a table of contents' entry, without its page number
         if (texts := a.find_all(string=True)) and PAGE_NUMBER.search(texts[-1]):
@@ -80,9 +82,9 @@ def word_html(data: bytes) -> str:
         raise ValueError("an old Word file (.doc) named .docx: save it as Word (.docx) to publish it")
     try:
         check_word_file(data)
-    except zipfile.BadZipFile:
-        raise ValueError("not a Word file (.docx), though named one") from None
-    data = _fields_as_text(data)
+        data = _fields_as_text(data)
+    except (zipfile.BadZipFile, zlib.error, NotImplementedError) as e:  # no zip, or a part that won't unpack
+        raise ValueError(f"not a Word file that can be read ({type(e).__name__}: {e})") from None
     fixed = _fixed_pitch_fonts(_part(data, "word/fontTable.xml"))
     code_runs = mammoth.transforms.run(
         lambda run: run.copy(style_name="Code") if run.font and monospace(run.font, fixed) else run
@@ -114,16 +116,23 @@ def _part(data: bytes, name: str) -> ElementTree.Element | None:
 
 def _fields_as_text(data: bytes) -> bytes:
     """A Word file with every simple field (w:fldSimple: a caption's number as Word writes it, a
-    date) as the text it shows, which mammoth would leave out."""
+    date) as the text it shows, which mammoth would leave out. Only a file with one is made again,
+    its images and other parts stored as they are, not packed again."""
     with zipfile.ZipFile(io.BytesIO(data)) as z:
-        parts = {info.filename: z.read(info) for info in z.infolist()}
-    fields = {name for name, part in parts.items() if name.endswith(".xml") and b"fldSimple" in part}
-    if not fields:
-        return data
-    out = io.BytesIO()
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-        for name, part in parts.items():
-            z.writestr(name, SIMPLE_FIELD.sub(b"", part) if name in fields else part)
+        fields = {
+            info.filename: SIMPLE_FIELD.sub(b"", part)
+            for info in z.infolist()
+            if info.filename.endswith(".xml") and b"fldSimple" in (part := z.read(info))
+        }
+        if not fields:
+            return data
+        out = io.BytesIO()
+        with zipfile.ZipFile(out, "w") as fixed:
+            for info in z.infolist():
+                if info.filename in fields:
+                    fixed.writestr(info.filename, fields[info.filename], zipfile.ZIP_DEFLATED)
+                else:
+                    fixed.writestr(info.filename, z.read(info), zipfile.ZIP_STORED)
     return out.getvalue()
 
 
