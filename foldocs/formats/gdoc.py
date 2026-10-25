@@ -45,6 +45,7 @@ def clean(export: DocExport, fetch) -> DocText:
             a["href"] = parse_qs(urlparse(a["href"]).query).get("q", [a["href"]])[0]  # Google's redirect wrapper
         if a.get("id") and not a["id"].startswith("ftnt"):  # footnote references point at those
             del a["id"]
+    _join_runs(body)  # once each link has its address: a redirect's differs for each piece
     # Where text is a block of its own: the page, a box (div) or a table cell.
     for holder in [body, *body.find_all(["div", "td", "th"])]:
         for p in holder.find_all("p", recursive=False):
@@ -104,6 +105,23 @@ def _restyle(soup: BeautifulSoup, span: Tag) -> None:
     for child in list(span.contents):
         inner.append(child.extract())
     span.replace_with(outer)
+
+
+def _join_runs(body: Tag) -> None:
+    """Docs splits text into runs, a span each, so a link or a bold word can come in pieces (and a
+    link's piece can be a space alone): neighboring tags that are the same, as one. Not <br>: two of
+    them are a blank line."""
+    for tag in list(body.find_all(["a", "strong", "em", "code", "s", "sup", "sub"])):
+        while (
+            tag.parent is not None
+            and isinstance(after := tag.next_sibling, Tag)
+            and after.name == tag.name
+            and after.attrs == tag.attrs
+            and "id" not in tag.attrs
+        ):
+            tag.extend(list(after.contents))
+            after.decompose()
+        tag.smooth()
 
 
 def _nest_lists(soup: BeautifulSoup, parent: Tag) -> None:

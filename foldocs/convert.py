@@ -99,22 +99,6 @@ def _trim(tag: Tag) -> None:
             child.replace_with(NavigableString(strip(str(child))))
 
 
-def _merge(tag: Tag) -> None:
-    """Neighboring inline tags that are the same, as one: a Doc splits its text into runs, so a
-    link or a bold word can come in pieces (and a link's piece can be a space alone)."""
-    for child in list(tag.find_all([*INLINE, "a"])):  # not <br>: two of them are a blank line
-        while (
-            child.parent is not None
-            and isinstance(after := child.next_sibling, Tag)
-            and after.name == child.name
-            and after.attrs == child.attrs
-            and "id" not in child.attrs
-        ):
-            child.extend(list(after.contents))
-            after.decompose()
-        child.smooth()
-
-
 def _blank(node) -> bool:
     return isinstance(node, NavigableString) and not node.strip()
 
@@ -161,20 +145,18 @@ class _Converter:
                 heading["id"] = self._unique(slugify(plain(heading), "section"))
                 if source_id:
                     self.heading_ids[source_id] = heading["id"]
-                if anchor := self.anchors.pop(heading["id"], None):  # a heading's id is its own
-                    del anchor["id"]
-                    if not anchor.has_attr("href"):  # a bookmark, now marking nothing
-                        anchor.unwrap()
         headings = [h for b in blocks for h in ([b] if HEADING.fullmatch(b.name) else b.find_all(HEADING))]
         if headings and (shift := min(int(h.name[1]) for h in headings) - 2) > 0:
             for h in headings:  # the highest heading left becomes an <h2>
                 h.name = f"h{int(h.name[1]) - shift}"
         links = [a for block in blocks for a in block.find_all("a", href=True)]
+        # What a link within the document may lead to: an id on the page as it came out (not one
+        # in the title taken out, or in a paragraph left out for having no text).
+        on_page = {tag["id"] for block in blocks for tag in [block, *block.find_all(id=True)] if tag.get("id")}
         for a in links:  # links within the document: to a heading by its new id; to nothing, nowhere
             if a["href"].startswith("#") and len(a["href"]) > 1:
-                target = a["href"][1:]
-                here = target in self.slugs or target in self.anchors
-                a["href"] = "#" + self.heading_ids.get(target, target if here else "")
+                target = self.heading_ids.get(a["href"][1:], a["href"][1:])
+                a["href"] = "#" + (target if target in on_page else "")
         return Doc(
             title=self.title,
             subtitle=self.subtitle,
@@ -231,9 +213,10 @@ class _Converter:
         return self._paragraph(el, "p")
 
     def _unique(self, base: str) -> str:
-        """An id unique on the page: a second "Notes" heading is notes-2."""
+        """An id unique on the page: a second "Notes" heading is notes-2, as is one where the
+        document has an id "notes" of its own (a bookmark's, a footnote's)."""
         slug, n = base, 2
-        while slug in self.slugs:
+        while slug in self.slugs or slug in self.anchors:
             slug, n = f"{base}-{n}", n + 1
         self.slugs.add(slug)
         return slug
@@ -243,7 +226,6 @@ class _Converter:
         imgs = [img.extract() for img in el.find_all("img")]
         tag = self.new(name)
         self._inline(el, tag)
-        _merge(tag)
         _trim(tag)
         blocks = [tag] if tag.get_text(strip=True) else []
         return blocks + [fig for img in imgs if (fig := self._figure(img))]
@@ -255,7 +237,7 @@ class _Converter:
         self.images.append(info)
         fig = self.new("figure")
         width = img.get("data-width", "")
-        share = int(width) if width.isdigit() and 0 < int(width) < 100 else 100
+        share = int(width) if width.isascii() and width.isdigit() and 0 < int(width) < 100 else 100
         if share < 100:
             fig["style"] = f"--width: {share}%"
         alt = img.get("alt") or img.get("title") or ""
@@ -305,7 +287,7 @@ class _Converter:
 
     def _anchor(self, src: Tag, dst: Tag) -> None:
         """The id a link or list item has in the document, if a link may point at it (a footnote's,
-        say) and the page has no such id yet; a heading that gets the same id takes it (see run)."""
+        say) and the page has no such id yet. It keeps it: a heading's id is made up, and makes way."""
         src_id = src.get("id", "")
         if ANCHOR_ID.fullmatch(src_id) and src_id not in self.anchors and src_id not in THEME_IDS:
             self.anchors[src_id] = dst
@@ -324,7 +306,7 @@ class _Converter:
     def _list(self, el: Tag) -> Tag:
         """A list, and the lists inside its items."""
         lst = self.new(el.name)
-        if el.name == "ol" and (start := el.get("start", "1")).isdigit() and start != "1":
+        if el.name == "ol" and (start := el.get("start", "1")).isascii() and start.isdigit() and start != "1":
             lst["start"] = start  # a list that goes on after something in between
         for item in el.find_all("li", recursive=False):
             li = self._holder(item, "li")
@@ -342,7 +324,7 @@ class _Converter:
             for td in tr.find_all(["td", "th"], recursive=False):
                 cell = self._holder(td, "td")
                 for span, most in SPANS.items():  # a merged cell
-                    if (n := td.get(span, "")).isdigit() and 1 < int(n) <= most:
+                    if (n := td.get(span, "")).isascii() and n.isdigit() and 1 < int(n) <= most:
                         cell[span] = n
                 row.append(cell)
             rows.append((tr, row))

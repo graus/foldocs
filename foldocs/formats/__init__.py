@@ -251,13 +251,17 @@ def take_titles(body: Tag) -> tuple[str | None, str | None]:
     return found[0], found[1]
 
 
+SEPARATOR = re.compile(r"[\s·•‧|–—,]*")  # what goes between links in a row of them
+
+
 def code_by_font_only(body: Tag) -> None:
     """Text a format made code for its monospace font, where the font is only its look: in a
-    heading, as a link's text, or punctuation alone. As text pasted from a web page comes, or a
-    heading in a typewriter font: no file name or setting, which is what code is for."""
+    heading, as a link's text, or a separator alone (the dots between links). As text pasted from a
+    web page comes, or a heading in a typewriter font: no file name or setting, which is what code is
+    for. Code of other punctuation ({}, ->, a lone } in a listing) stays code."""
     for code in body.find_all("code"):
         heading = code.find_parent(re.compile(r"h[1-6]"))
-        if heading or code.find("a") or code.find_parent("a") or not re.search(r"\w", code.get_text()):
+        if heading or code.find("a") or code.find_parent("a") or SEPARATOR.fullmatch(code.get_text()):
             code.unwrap()
 
 

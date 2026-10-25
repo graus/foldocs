@@ -40,7 +40,7 @@ MEANT = {
 # A simple field (a caption's number, a date), as its tags: mammoth leaves out its text.
 SIMPLE_FIELD = re.compile(rb"""</?(?:\w+:)?fldSimple\b(?:[^>"']|"[^"]*"|'[^']*')*>""")
 # A table of contents' page number, after the tab that ends its entry's text.
-PAGE_NUMBER = re.compile(r"\t\s*([0-9]+|[ivxlcdm]+)\s*$", re.IGNORECASE)
+PAGE_NUMBER = re.compile(r"\t\s*([0-9]+|[ivx]{1,5})\s*$", re.IGNORECASE)  # not "mid", "civil"
 
 
 def read(file: Reading) -> DocText:
@@ -85,7 +85,8 @@ def word_html(data: bytes) -> str:
         data = _fields_as_text(data)
     except (zipfile.BadZipFile, zlib.error, NotImplementedError) as e:  # no zip, or a part that won't unpack
         raise ValueError(f"not a Word file that can be read ({type(e).__name__}: {e})") from None
-    fixed = _fixed_pitch_fonts(_part(data, "word/fontTable.xml"))
+    font_table, styles = _parts(data, "word/fontTable.xml", "word/styles.xml")
+    fixed = _fixed_pitch_fonts(font_table)
     code_runs = mammoth.transforms.run(
         lambda run: run.copy(style_name="Code") if run.font and monospace(run.font, fixed) else run
     )
@@ -94,7 +95,7 @@ def word_html(data: bytes) -> str:
         # so those are never followed (mammoth's default; said here, where it matters).
         result = mammoth.convert_to_html(
             io.BytesIO(data),
-            style_map=_derived_styles(_part(data, "word/styles.xml")) + STYLES,
+            style_map=_derived_styles(styles) + STYLES,
             external_file_access=False,
             transform_document=code_runs,
         )
@@ -103,15 +104,19 @@ def word_html(data: bytes) -> str:
     return result.value
 
 
-def _part(data: bytes, name: str) -> ElementTree.Element | None:
-    """A small XML part of a Word file (its font table, its styles), or None if it has none."""
-    try:
-        with zipfile.ZipFile(io.BytesIO(data)) as z:
-            if z.getinfo(name).file_size > PART_MAX:  # a real one is well under a megabyte
-                return None
-            return untrusted_xml(z.read(name))
-    except (KeyError, zipfile.BadZipFile, ElementTree.ParseError):
-        return None
+def _parts(data: bytes, *names: str) -> list[ElementTree.Element | None]:
+    """Small XML parts of a Word file (its font table, its styles), each None where it has none,
+    or one too large or not XML."""
+    found = []
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
+        for name in names:
+            try:
+                if z.getinfo(name).file_size > PART_MAX:  # a real one is well under a megabyte
+                    raise KeyError(name)
+                found.append(untrusted_xml(z.read(name)))
+            except (KeyError, ElementTree.ParseError):
+                found.append(None)
+    return found
 
 
 def _fields_as_text(data: bytes) -> bytes:
@@ -178,7 +183,7 @@ def _derived_styles(styles: ElementTree.Element | None) -> str:
             seen.add(current)
             base_name, based, level = found[current]
             if level is not None:
-                if level.isdigit() and int(level) < 6:
+                if level.isascii() and level.isdigit() and int(level) < 6:
                     lines.append(f"p[style-name='{name}'] => h{int(level) + 1}:fresh")
                 break
             if base_name.lower() in MEANT:
