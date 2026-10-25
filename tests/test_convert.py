@@ -484,7 +484,7 @@ def test_a_monospace_font_on_a_heading_a_link_or_punctuation_is_its_look_not_cod
 def test_a_bookmark_with_no_id_it_can_keep_is_its_text():
     """An <a> without an address whose id is the themes', not a usable one, or none: its text."""
     for html in ['<p>x <a id="main">here</a></p>', '<p>x <a name="n">here</a></p>', '<p>x <a id="a b">here</a></p>']:
-        doc = convert.convert(html, image, attrs, "T")
+        doc = convert.convert(html, image, attrs, "T", link=lambda href: None)
         assert doc.html == "<p>x here</p>", html
 
 
@@ -495,6 +495,11 @@ def test_two_line_breaks_are_a_blank_line_still():
 def test_a_heading_keeps_its_id_whatever_bookmark_comes_first():
     doc = convert.convert('<p><a href="#notes">go</a> <a id="notes"></a>mark</p><h2>Notes</h2>', image, attrs, "T")
     assert doc.html == '<p><a href="#notes">go</a> mark</p>\n<h2 id="notes">Notes</h2>'
+
+
+def test_a_folder_link_is_only_as_the_sync_writes_it():
+    doc = convert.convert('<p><a href="Folder:/x.md">a</a> <a href="folder:/x.md">b</a></p>', image, attrs, "T")
+    assert doc.html == '<p>a <a href="folder:/x.md">b</a></p>'
 
 
 def test_a_utf8_file_with_a_bad_byte_keeps_its_other_letters():
