@@ -4,7 +4,7 @@
   {# The name is the page's heading on the home page only; elsewhere the page has its own. #}
   {% if url == "/" %}<h1 class="site-title"><a href="/">{{ site.author }}</a></h1>{% else %}<p class="site-title"><a href="/">{{ site.author }}</a></p>{% endif %}
   <nav aria-label="{{ t.main_menu }}">
-    {% for item in nav %}{% if item.kind == "page" and loop.previtem and loop.previtem.kind == "section" %}<span class="rule" aria-hidden="true">·</span>{% endif %}<a href="{{ item.url }}"{% if item.kind == "page" %} class="page"{% endif %}{% if item.url == url %} aria-current="page"{% elif item.url == active %} aria-current="true"{% endif %}>{{ item.label|ucfirst }}</a>{% endfor %}
+    {% for item in nav %}{% if item.kind == "page" and not loop.first and loop.previtem.kind == "section" %}<span class="rule" aria-hidden="true">·</span>{% endif %}<a href="{{ item.url }}"{% if item.kind == "page" %} class="page"{% endif %}{% if item.url == url %} aria-current="page"{% elif item.url == active %} aria-current="true"{% endif %}>{{ item.label|ucfirst }}</a>{% endfor %}
   </nav>
 </header>
 {% endblock %}

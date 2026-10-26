@@ -22,7 +22,7 @@
      works by click, keyboard and touch without a script; the script below only closes it. #}
   <nav class="site-nav" aria-label="{{ t.main_menu }}">
     {% for item in nav %}
-    {% if item.kind == "page" and loop.previtem and loop.previtem.kind == "section" %}<span class="site-nav-rule" aria-hidden="true"></span>{% endif %}
+    {% if item.kind == "page" and not loop.first and loop.previtem.kind == "section" %}<span class="site-nav-rule" aria-hidden="true"></span>{% endif %}
     {% set link %}<a href="{{ item.url }}"{% if item.kind == "page" %} class="site-nav-page"{% endif %}{% if item.url == url %} aria-current="page"{% elif item.url == active %} aria-current="true"{% endif %}>{{ item.label|ucfirst }}</a>{% endset %}
     {% if item.children %}
     <div class="site-nav-group">
