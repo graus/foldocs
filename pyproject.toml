@@ -64,6 +64,7 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 120
 target-version = "py313"
+extend-exclude = ["tests/corpus"]  # documents as people leave them, broken ones too
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM"]

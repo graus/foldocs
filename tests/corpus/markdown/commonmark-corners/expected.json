@@ -1,0 +1,40 @@
+{
+ "title": "A setext title",
+ "subtitle": null,
+ "html": [
+  "<h3 id=\"a-setext-heading\">A setext heading</h3>",
+  "<p>Reference <a href=\"https://example.com/a\">links</a>, <a href=\"https://example.com/c\">collapsed</a>, <a href=\"https://example.com/s\">shortcut</a> and .</p>",
+  "<figure><img alt=\"a reference image\" decoding=\"async\" height=\"8\" loading=\"lazy\" src=\"image-d1066102\" width=\"8\"/></figure>",
+  "<p>Escaped *stars*, # hash, [brackets], and a literal \\ backslash.</p>",
+  "<p>Code with <code>a ` backtick</code> in it, and <code>`</code> alone.</p>",
+  "<pre><code>indented code",
+  "block</code></pre>",
+  "<hr/>",
+  "<hr/>",
+  "<hr/>",
+  "<p>empty, empty href, [js](javascript:alert(1)), &lt;javascript:alert(2)&gt;,",
+  "[data](data:text/html;base64,PHNjcmlwdD4=), [vb](VBSCRIPT:x) and [file](file:///etc/passwd).</p>",
+  "<figure><img alt=\"data image\" decoding=\"async\" height=\"8\" loading=\"lazy\" src=\"image-4caece53\" width=\"8\"/></figure>",
+  "<p>relative, <a href=\"/about\">root</a>, <a href=\"#a-setext-heading\">anchor</a>, query, <a href=\"mailto:jan@example.com\">mail</a>, <a href=\"tel:+31201234567\">phone</a>.</p>",
+  "<p>Hard",
+  "break, and a <em>nested <strong>strong</strong> inside</em> emphasis, <em><strong>both</strong></em> at once.</p>",
+  "<ol><li>a paren list</li><li>second</li></ol>",
+  "<ol start=\"7\"><li>starts at seven</li><li>eight</li></ol>",
+  "<p>&lt;not a tag&gt; and &amp;unknown; entity and 😀 emoji.</p>",
+  "<p>A very long word: Rindfleischetikettierungsüberwachungsaufgabenübertragungsgesetz.</p>",
+  "<h2 id=\"heading-with-code-and-a-link\">Heading with <code>code</code> and <a href=\"https://example.com\">a link</a></h2>",
+  "<h2 id=\"heading-with-trailing-hashes\">Heading with trailing hashes</h2>",
+  "<p>#Not a heading</p>"
+ ],
+ "text": "Reference links, collapsed, shortcut and . Escaped *stars*, # hash, [brackets], and a literal \\ backslash. Code with a ` backtick in it, and ` alone. empty, empty href, [js](javascript:alert(1)), <javascript:alert(2)>, [data](data:text/html;base64,PHNjcmlwdD4=), [vb](VBSCRIPT:x) and [file](file:///etc/passwd). relative, root, anchor, query, mail, phone. Hard break, and a nested strong inside emphasis, both at once. <not a tag> and &unknown; entity and 😀 emoji. A very long word: Rindfleischetikettierungsüberwachungsaufgabenübertragungsgesetz. #Not a heading",
+ "links": [
+  "https://example.com/a",
+  "https://example.com/c",
+  "https://example.com/s",
+  "/about",
+  "#a-setext-heading",
+  "mailto:jan@example.com",
+  "tel:+31201234567",
+  "https://example.com"
+ ]
+}

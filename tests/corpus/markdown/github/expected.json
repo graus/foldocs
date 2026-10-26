@@ -1,0 +1,36 @@
+{
+ "title": "Project notes",
+ "subtitle": null,
+ "html": [
+  "<blockquote>[!NOTE]",
+  "Useful information that readers should know.</blockquote>",
+  "<blockquote>[!WARNING]",
+  "Critical content demanding attention.</blockquote>",
+  "<ul><li>[x] Done task</li><li>[ ] Open task<ul><li>[ ] Nested task</li></ul></li></ul>",
+  "<div class=\"table-wrap\"><table><thead><tr><th scope=\"col\">Left</th><th scope=\"col\">Center</th><th scope=\"col\">Right</th></tr></thead><tbody><tr><td>a</td><td>b</td><td>c</td></tr><tr><td><code>x | y</code></td><td><strong>bold</strong></td><td><a href=\"https://example.com\">link</a></td></tr></tbody></table></div>",
+  "<p>A statement with a footnote[^note].</p>",
+  "<p>[^note]: The footnote text, by Jan Jansen.</p>",
+  "<p>&lt;details&gt;",
+  "&lt;summary&gt;Click to expand&lt;/summary&gt;</p>",
+  "<p>Hidden content inside details.</p>",
+  "<p>&lt;/details&gt;</p>",
+  "<p>https://example.com/autolinked and <a href=\"https://example.com/angle\">https://example.com/angle</a> and <a href=\"mailto:jan@example.com\">jan@example.com</a>.</p>",
+  "<p>:tada: an emoji shortcode and 🎉 a real one.</p>",
+  "<p><s>strike</s> and ~single tilde~.</p>",
+  "<pre><code>- old line",
+  "+ new line</code></pre>",
+  "<p>Line with two trailing spaces<br/>",
+  "and the next line.</p>",
+  "<p>Line with a backslash<br/>",
+  "and the next.</p>",
+  "<p>@jan mentions #12 an issue.</p>",
+  "<p>&lt;kbd&gt;Ctrl&lt;/kbd&gt;+&lt;kbd&gt;C&lt;/kbd&gt;</p>",
+  "<pre><code>graph TD; A--&gt;B;</code></pre>"
+ ],
+ "text": "A statement with a footnote[^note]. [^note]: The footnote text, by Jan Jansen. <details> <summary>Click to expand</summary> Hidden content inside details. </details> https://example.com/autolinked and https://example.com/angle and jan@example.com. :tada: an emoji shortcode and 🎉 a real one. strike and ~single tilde~. Line with two trailing spaces and the next line. Line with a backslash and the next. @jan mentions #12 an issue. <kbd>Ctrl</kbd>+<kbd>C</kbd>",
+ "links": [
+  "https://example.com",
+  "https://example.com/angle",
+  "mailto:jan@example.com"
+ ]
+}

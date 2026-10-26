@@ -1,0 +1,14 @@
+{
+ "title": "Saved on Windows",
+ "subtitle": null,
+ "html": [
+  "<h2 id=\"a-heading\">A heading</h2>",
+  "<p>Text with Windows line endings.</p>",
+  "<ul><li>one</li><li>two</li></ul>",
+  "<pre><code>code",
+  "lines</code></pre>",
+  "<div class=\"table-wrap\"><table><thead><tr><th scope=\"col\">a</th><th scope=\"col\">b</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table></div>"
+ ],
+ "text": "Text with Windows line endings.",
+ "links": []
+}

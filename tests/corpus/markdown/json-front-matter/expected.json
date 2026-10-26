@@ -1,0 +1,11 @@
+{
+ "title": "Front matter in JSON",
+ "subtitle": "As Hugo reads it",
+ "html": [
+  "<p>The text after the front matter.</p>",
+  "<h2 id=\"a-heading\">A heading</h2>",
+  "<p>More text.</p>"
+ ],
+ "text": "The text after the front matter. More text.",
+ "links": []
+}

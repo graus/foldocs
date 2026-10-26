@@ -1,0 +1,15 @@
+{
+ "title": "Images",
+ "subtitle": null,
+ "html": [
+  "<p>An image on its own line:</p>",
+  "<figure><img alt=\"An orange square\" decoding=\"async\" height=\"8\" loading=\"lazy\" src=\"image-0b76a6d8\" width=\"8\"/></figure>",
+  "<p>An image in a line of text  and then more text.</p>",
+  "<figure><img alt=\"\" decoding=\"async\" height=\"8\" loading=\"lazy\" src=\"image-58ca29cd\" width=\"8\"/></figure>",
+  "<p>A small image, a third of the page:</p>",
+  "<figure><img alt=\"\" decoding=\"async\" height=\"8\" loading=\"lazy\" src=\"image-1ba5e14a\" width=\"8\"/></figure>",
+  "<div class=\"table-wrap\"><table><tbody><tr><td>In a table:</td><td><figure><img alt=\"\" decoding=\"async\" height=\"8\" loading=\"lazy\" src=\"image-b9c3f9c9\" width=\"8\"/></figure></td></tr></tbody></table></div>"
+ ],
+ "text": "An image on its own line: An image in a line of text and then more text. A small image, a third of the page:",
+ "links": []
+}

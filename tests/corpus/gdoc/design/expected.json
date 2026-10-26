@@ -1,0 +1,10 @@
+{
+ "title": "design",
+ "subtitle": null,
+ "html": [
+  "<p>Not a page: the table below sets the site's colors and fonts, on top of the theme. Leave a cell empty to keep the theme's value; any font on Google Fonts works.</p>",
+  "<div class=\"table-wrap\"><table><tbody><tr><td>Setting</td><td>Light</td><td>Dark</td></tr><tr><td>Accent</td><td>#1f6b5c</td><td>#7fd1bd</td></tr><tr><td>Heading font</td><td>Fraunces</td><td></td></tr></tbody></table></div>"
+ ],
+ "text": "Not a page: the table below sets the site's colors and fonts, on top of the theme. Leave a cell empty to keep the theme's value; any font on Google Fonts works.",
+ "links": []
+}

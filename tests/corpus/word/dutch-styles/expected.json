@@ -1,0 +1,13 @@
+{
+ "title": "Reisverslag",
+ "subtitle": null,
+ "html": [
+  "<h2 id=\"inleiding\">Inleiding</h2>",
+  "<p>We vertrokken vroeg.</p>",
+  "<h3 id=\"dag-een\">Dag één</h3>",
+  "<p>Regen, en toen zon.</p>",
+  "<blockquote>Wie niet waagt, die niet wint.</blockquote>"
+ ],
+ "text": "We vertrokken vroeg. Regen, en toen zon.",
+ "links": []
+}

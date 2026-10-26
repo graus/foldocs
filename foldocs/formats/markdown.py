@@ -1,18 +1,57 @@
 """A Markdown file (.md), as CommonMark with tables and ~~strikethrough~~. HTML written in the
-file is shown as the text it is, not read as markup. Its images are other files in the folder,
-linked by a path from its own (as Nextcloud's Text app keeps them, in a hidden .attachments
-folder beside it), or inside it as data: URIs."""
+file is shown as the text it is, not read as markup; an HTML comment (Hugo's <!--more-->) is left
+out. Its images are other files in the folder, linked by a path from its own (as Nextcloud's Text
+app keeps them, in a hidden .attachments folder beside it), or inside it as data: URIs.
 
+Its text is UTF-8, as nearly every editor saves it; or UTF-16 with a byte-order mark, as Windows
+Notepad saves "Unicode"; or else Windows-1252, as older Windows editors save."""
+
+import codecs
+import json
 import re
+import tomllib
 
 from bs4 import BeautifulSoup
 from markdown_it import MarkdownIt
+from markdown_it.common.utils import escapeHtml
+from markdown_it.rules_block import html_block
 
 from . import DocText, Reading, inline_image
 
-MARKDOWN = MarkdownIt("commonmark", {"html": False}).enable(["table", "strikethrough"])
-# Between --- lines at the top, as static site generators write it.
-FRONT_MATTER = re.compile(r"\A---[ \t]*\n(.*?)^---[ \t]*$\n?", re.DOTALL | re.MULTILINE)
+MARKDOWN = MarkdownIt("commonmark", {"html": True}).enable(["table", "strikethrough"])
+COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+# A letter beyond ASCII as UTF-8 writes it: two, three or four bytes
+UTF8_LETTER = re.compile(rb"[\xc2-\xdf][\x80-\xbf]|[\xe0-\xef][\x80-\xbf]{2}|[\xf0-\xf4][\x80-\xbf]{3}")
+
+
+def _html_as_text(self, tokens, idx, options, env) -> str:
+    """HTML in the file, as the text it is; a comment, as nothing."""
+    token = tokens[idx]
+    html = COMMENT.sub("", token.content).strip("\n")
+    if not html.strip():
+        return ""
+    return f"<p>{escapeHtml(html)}</p>\n" if token.type == "html_block" else escapeHtml(html)
+
+
+def _comment_block(state, start: int, end: int, silent: bool) -> bool:
+    """Of HTML blocks, only a comment that ends its line: other HTML is text in the paragraph it is
+    in, so the lines after a tag (a README's <p align="center">) are read as Markdown, as if HTML
+    were off; and so is what follows a comment on its line (<!--more--> **Read on**)."""
+    begin = state.bMarks[start] + state.tShift[start]
+    if not state.src.startswith("<!--", begin) or (close := state.src.find("-->", begin)) < 0:
+        return False
+    rest = state.src[close + 3 :].split("\n", 1)[0]
+    return not rest.strip() and html_block(state, start, end, silent)
+
+
+MARKDOWN.block.ruler.at("html_block", _comment_block, {"alt": ["paragraph", "reference", "blockquote"]})
+MARKDOWN.add_render_rule("html_block", _html_as_text)
+MARKDOWN.add_render_rule("html_inline", _html_as_text)
+
+# Front matter, as static site generators write it: YAML between --- lines (or closed by ..., as
+# Pandoc does), TOML between +++ lines (Hugo's own), or a JSON object (Hugo reads that too).
+FRONT_MATTER = re.compile(r"\A---[ \t]*\n(.*?)^(?:---|\.\.\.)[ \t]*$\n?", re.DOTALL | re.MULTILINE)
+TOML_FRONT_MATTER = re.compile(r"\A\+\+\+[ \t]*\n(.*?)^\+\+\+[ \t]*$\n?", re.DOTALL | re.MULTILINE)
 # What front matter is made of: `key: value` lines, the items and indented lines of a longer value,
 # comments.
 KEY = re.compile(r"([\w-]+)[ \t]*:(.*)")
@@ -22,8 +61,7 @@ FRONT_LINE = re.compile(rf"{KEY.pattern}|-([ \t].*)?|[ \t]+.*|#.*|[ \t]*")
 def read(file: Reading) -> DocText:
     """A heading that opens the file is its title, as in a Doc; front matter can name a title and
     a subtitle (or description) instead, and is otherwise left out."""
-    text = file.download().decode("utf-8-sig", errors="replace").replace("\r\n", "\n")  # as saved on Windows
-    meta, text = front_matter(text)
+    meta, text = front_matter(decode(file.download()))
 
     def image(src: str) -> bytes:
         if src.startswith("data:"):
@@ -39,10 +77,42 @@ def read(file: Reading) -> DocText:
     return DocText(body, image, meta.get("title"), meta.get("subtitle") or meta.get("description"))
 
 
+def decode(data: bytes) -> str:
+    """A Markdown file's text, with Windows line endings as any other. Raises ValueError for a file
+    that is no text (one with NUL characters in it, such as an image named .md)."""
+    if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        text = data.decode("utf-16", errors="replace")
+    else:
+        try:
+            text = data.decode("utf-8-sig")
+        except UnicodeDecodeError:  # UTF-8 with a bad byte or two (a paste), or another encoding
+            utf8 = data.decode("utf-8-sig", errors="replace")
+            mostly_utf8 = len(UTF8_LETTER.findall(data)) > utf8.count("\ufffd")
+            text = utf8 if mostly_utf8 else data.decode("cp1252", errors="replace")
+    if "\0" in text:
+        raise ValueError("not a text file, though named a Markdown file")
+    return text.replace("\r\n", "\n")
+
+
 def front_matter(text: str) -> tuple[dict[str, str], str]:
-    """The `key: value` lines of a Markdown file's front matter (with no value of more lines, as
-    YAML can have: Foldocs reads only a title and a subtitle), and the text after it. A file that
-    opens with a rule (---) and has text that isn't front matter before the next one keeps it all."""
+    """A Markdown file's front matter, as its text values (Foldocs reads only a title and a
+    subtitle), and the text after it. Of YAML, the `key: value` lines (with no value of more lines,
+    as YAML can have); a file that opens with a rule (---) and has text that isn't front matter
+    before the next one keeps it all. TOML or JSON that doesn't parse is text too."""
+    if m := TOML_FRONT_MATTER.match(text):
+        try:
+            return _texts(tomllib.loads(m[1])), text[m.end() :]
+        except (tomllib.TOMLDecodeError, RecursionError):  # RecursionError: nested past Python's depth
+            return {}, text
+    if text.startswith("{"):
+        try:
+            data, end = json.JSONDecoder().raw_decode(text)
+        except (ValueError, RecursionError):
+            return {}, text
+        line_end = re.compile(r"[ \t]*(\n|\Z)").match(text, end)  # the object ends its line
+        if not isinstance(data, dict) or not line_end:
+            return {}, text
+        return _texts(data), text[line_end.end() :]
     m = FRONT_MATTER.match(text)
     lines = m[1].splitlines() if m else []
     keys = [found for line in lines if (found := KEY.fullmatch(line))]
@@ -50,6 +120,10 @@ def front_matter(text: str) -> tuple[dict[str, str], str]:
         return {}, text
     meta = {key[1].lower(): value for key in keys if (value := _value(key[2]))}
     return meta, text[m.end() :]
+
+
+def _texts(data: dict) -> dict[str, str]:
+    return {key.lower(): value.strip() for key, value in data.items() if isinstance(value, str) and value.strip()}
 
 
 def _value(raw: str) -> str | None:

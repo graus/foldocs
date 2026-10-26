@@ -1,0 +1,15 @@
+{
+ "title": "Tables",
+ "subtitle": null,
+ "html": [
+  "<p>A table with merged cells:</p>",
+  "<div class=\"table-wrap\"><table><thead><tr><th scope=\"col\">Day</th><th scope=\"col\">Where</th><th scope=\"col\">Cost</th></tr></thead><tbody><tr><td>Monday</td><td rowspan=\"2\">Utrecht</td><td>€ 12</td></tr><tr><td>Tuesday</td><td>€ 8</td></tr></tbody></table></div>",
+  "<div class=\"table-wrap\"><table><tbody><tr><td colspan=\"2\">Spanning the whole row</td></tr><tr><td>left</td><td>right</td></tr></tbody></table></div>",
+  "<p>A table inside a table:</p>",
+  "<div class=\"table-wrap\"><table><tbody><tr><td>Outside</td><td><div class=\"table-wrap\"><table><tbody><tr><td>Inside one</td></tr><tr><td>Inside two</td></tr></tbody></table></div></td></tr></tbody></table></div>",
+  "<p>A table with a list and an empty row:</p>",
+  "<div class=\"table-wrap\"><table><tbody><tr><td>Bring</td><td>Coat<ul><li>Boots</li><li>Hat</li></ul></td></tr><tr><td></td><td></td></tr></tbody></table></div>"
+ ],
+ "text": "A table with merged cells: A table inside a table: A table with a list and an empty row:",
+ "links": []
+}

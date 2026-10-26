@@ -1,0 +1,19 @@
+{
+ "title": "Numbering without a list style",
+ "subtitle": null,
+ "html": [
+  "<p>Typed by hand:</p>",
+  "<p>1. Pack the bags</p>",
+  "<p>2. Lock the door</p>",
+  "<p>3) Leave the key</p>",
+  "<p>a. with the neighbours</p>",
+  "<p>- or under the mat</p>",
+  "<p>Numbered by the paragraph itself, in the Normal style:</p>",
+  "<ol><li>First<ol><li>Inside it</li></ol></li><li>Second</li></ol>",
+  "<ul><li>A dot</li></ul>",
+  "<p>Then a numbered list with a level skipped:</p>",
+  "<ol><li>Top<ul><li><ol><li>Two levels down</li></ol></li></ul></li><li>Top again</li></ol>"
+ ],
+ "text": "Typed by hand: 1. Pack the bags 2. Lock the door 3) Leave the key a. with the neighbours - or under the mat Numbered by the paragraph itself, in the Normal style: Then a numbered list with a level skipped:",
+ "links": []
+}

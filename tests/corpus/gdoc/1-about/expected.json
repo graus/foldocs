@@ -1,0 +1,37 @@
+{
+ "title": "About Jan",
+ "subtitle": "A page in the menu: any document in the top of the folder.",
+ "html": [
+  "<p>Every document next to <code>intro</code> is a page of its own, in the menu after the sections. Its name makes its address (this one is at /about/), and the number in front sets the order without being shown.</p>",
+  "<p>Write about yourself here. Headings, lists, <strong>bold</strong>, <em>italic</em>, <a href=\"https://foldocs.com\">links</a> and tables all come along:</p>",
+  "<div class=\"table-wrap\"><table><tbody><tr><td>Year</td><td>What</td></tr><tr><td>2024</td><td>Moved to Amsterdam</td></tr><tr><td>2026</td><td>Made a website from a folder</td></tr></tbody></table></div>",
+  "<p>building search engines and recommender systems in industry, at two companies.</p>",
+  "<p><a href=\"https://example.com/about/\">More about me</a> ·<a href=\"https://example.com/research/\"> Research</a> ·<a href=\"https://example.com/publications/\"> Papers</a> ·<a href=\"https://example.com/about/#contact\"> Get in touch</a></p>",
+  "<h2 id=\"latest\">Latest</h2>",
+  "<ul><li><a href=\"https://example.com/projects/foldocs-create-a-website-from-a-folder-of-documents/\">Foldocs: create a website from a folder of documents</a><figure style=\"--width: 52%\"><img alt=\"\" decoding=\"async\" height=\"8\" loading=\"lazy\" sizes=\"(min-width: 48rem) 22.1rem, calc((100vw - 2rem) * 0.52)\" src=\"image-d6babb47\" width=\"8\"/></figure></li><li><code>October 23, 2026</code></li><li>I made something! Foldocs: a website made from a folder of documents. Foldocs allows you to easily build a website from a shared Google Drive or shared Nextcloud…</li><li><a href=\"https://example.com/research/thesis-projects-2026/\">Thesis projects 2026</a><figure style=\"--width: 37%\"><img alt=\"\" decoding=\"async\" height=\"8\" loading=\"lazy\" sizes=\"(min-width: 48rem) 15.7rem, calc((100vw - 2rem) * 0.37)\" src=\"image-15e88f05\" width=\"8\"/></figure></li></ul>",
+  "<ol><li>One</li><li>Three</li><li>One</li><li>Two</li><li>Three</li></ol>",
+  "<ol start=\"4\"><li>5. fa</li></ol>",
+  "<ol start=\"5\"><li>7. Hi</li></ol>",
+  "<div class=\"table-wrap\"><table><tbody><tr><td colspan=\"2\">Merged cells</td><td></td><td></td></tr><tr><td rowspan=\"2\">Mergery more</td><td></td><td><div class=\"table-wrap\"><table><tbody><tr><td>yes</td><td>why</td></tr><tr><td>no</td><td>table</td></tr></tbody></table></div></td><td></td></tr><tr><td></td><td>Inside a table?</td><td></td></tr></tbody></table></div>",
+  "<figure><img alt=\"Points scored\" decoding=\"async\" height=\"8\" loading=\"lazy\" src=\"image-18a5efba\" width=\"8\"/></figure>",
+  "<p><a href=\"mailto:jan@example.com\">jan@example.com</a> is gek</p>",
+  "<p>Oct 25, 2026</p>",
+  "<p><a href=\"https://example.com/paper\">https://example.com/paper</a></p>",
+  "<p><a href=\"https://example.com/\">Jan Jansen</a></p>",
+  "<figure><img alt=\"\" decoding=\"async\" height=\"8\" loading=\"lazy\" src=\"image-6108bc24\" width=\"8\"/></figure>",
+  "<p>Right to left, can I add that? 👎 No I cannot 😭</p>"
+ ],
+ "text": "Every document next to intro is a page of its own, in the menu after the sections. Its name makes its address (this one is at /about/), and the number in front sets the order without being shown. Write about yourself here. Headings, lists, bold, italic, links and tables all come along: building search engines and recommender systems in industry, at two companies. More about me · Research · Papers · Get in touch jan@example.com is gek Oct 25, 2026 https://example.com/paper Jan Jansen Right to left, can I add that? 👎 No I cannot 😭",
+ "links": [
+  "https://foldocs.com",
+  "https://example.com/about/",
+  "https://example.com/research/",
+  "https://example.com/publications/",
+  "https://example.com/about/#contact",
+  "https://example.com/projects/foldocs-create-a-website-from-a-folder-of-documents/",
+  "https://example.com/research/thesis-projects-2026/",
+  "mailto:jan@example.com",
+  "https://example.com/paper",
+  "https://example.com/"
+ ]
+}

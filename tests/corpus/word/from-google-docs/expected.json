@@ -1,0 +1,23 @@
+{
+ "title": "A weekend in Utrecht",
+ "subtitle": "Notes by Jan Jansen",
+ "html": [
+  "<h2 id=\"getting-there\">Getting there</h2>",
+  "<p>We took the <strong>early</strong> train; the <em>timetable</em> is on</p>",
+  "<p><a href=\"https://example.com/trains\">example.com</a></p>",
+  "<p>What to bring:</p>",
+  "<ul><li>A coat</li><li>Boots</li><li>A map</li></ul>",
+  "<h2 id=\"the-days\">The days</h2>",
+  "<h3 id=\"saturday\">Saturday</h3>",
+  "<ol><li>First the canal,</li><li>then the tower.</li></ol>",
+  "<p><em>It rained, then it didn't.</em></p>",
+  "<div class=\"table-wrap\"><table><thead><tr><th scope=\"col\">What</th><th scope=\"col\">Cost</th></tr></thead><tbody><tr><td>Train</td><td>€ 24</td></tr><tr><td>Lunch</td><td>€ 12</td></tr></tbody></table></div>",
+  "<figure><img alt=\"A blue rectangle\" decoding=\"async\" height=\"8\" loading=\"lazy\" src=\"image-be8201a8\" width=\"8\"/></figure>",
+  "<p>Back home at eight.</p>",
+  "<p><code>FOLDER_URL</code></p>"
+ ],
+ "text": "We took the early train; the timetable is on example.com What to bring: It rained, then it didn't. Back home at eight. FOLDER_URL",
+ "links": [
+  "https://example.com/trains"
+ ]
+}

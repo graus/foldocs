@@ -1,0 +1,22 @@
+{
+ "title": "Table of contents",
+ "subtitle": null,
+ "html": [
+  "<p>Contents</p>",
+  "<p><a href=\"#getting-there\">Getting there</a></p>",
+  "<p><a href=\"#by-train\">By train</a></p>",
+  "<p><a href=\"#staying\">Staying</a></p>",
+  "<h2 id=\"getting-there\">Getting there</h2>",
+  "<p>Text about getting there.</p>",
+  "<h3 id=\"by-train\">By train</h3>",
+  "<p>Text about by train.</p>",
+  "<h2 id=\"staying\">Staying</h2>",
+  "<p>Text about staying.</p>"
+ ],
+ "text": "Contents Getting there By train Staying Text about getting there. Text about by train. Text about staying.",
+ "links": [
+  "#getting-there",
+  "#by-train",
+  "#staying"
+ ]
+}

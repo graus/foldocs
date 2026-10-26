@@ -1,0 +1,16 @@
+{
+ "title": "Dit is een titel",
+ "subtitle": "Dit een subtitel",
+ "html": [
+  "<p>Hallo, mijn naam is Jan. Ik test een site. Drie dingen die ik nooit doe:</p>",
+  "<ol><li>Na-apen</li><li>Slapen</li><li>Praten met scotoe</li></ol>",
+  "<p>En ik ben te vinden op het internet</p>",
+  "<ul><li>X</li><li><a href=\"https://x.com/janjansen\">https://x.com/janjansen</a></li><li><a href=\"https://www.facebook.com/janjansen\">Facebook</a></li><li><a href=\"https://www.instagram.com/janjansen/\">Insta</a></li></ul>"
+ ],
+ "text": "Hallo, mijn naam is Jan. Ik test een site. Drie dingen die ik nooit doe: En ik ben te vinden op het internet",
+ "links": [
+  "https://x.com/janjansen",
+  "https://www.facebook.com/janjansen",
+  "https://www.instagram.com/janjansen/"
+ ]
+}

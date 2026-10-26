@@ -1,3 +1,4 @@
+import io
 from xml.etree import ElementTree
 
 import pytest
@@ -235,7 +236,7 @@ def test_a_word_file_with_a_dtd_anywhere_is_refused(tmp_path, part):
     with pytest.raises(ElementTree.ParseError):
         word.word_html(data)
     if part == "word/fontTable.xml":
-        assert word._fixed_pitch_fonts(data) == frozenset()
+        assert word._parts(data, part) == [None]
 
 
 def test_a_word_file_whose_document_has_another_name_is_checked_too(tmp_path):
@@ -421,3 +422,151 @@ def test_markdown_front_matter_values(front, expected):
 def test_a_list_item_of_an_image_alone_keeps_it():
     doc = convert_body('<ul><li>one</li><li><img src="a.png"></li></ul>')
     assert doc.html.startswith("<ul><li>one</li><li><figure>") and len(doc.images) == 1
+
+
+def test_a_heading_taken_out_as_the_title_leaves_its_id_to_the_next():
+    doc = convert_markdown("# Notes\n\nText.\n\n## Notes\n\n[up](#notes)\n")
+    assert doc.title == "Notes" and '<h2 id="notes">Notes</h2>' in doc.html
+
+
+def test_a_merged_cell_keeps_its_span():
+    html = convert_body('<table><tr><td colspan="2">a</td></tr><tr><td rowspan="x">b</td><td>c</td></tr></table>').html
+    assert '<td colspan="2">a</td>' in html and "<td>b</td>" in html
+
+
+def test_a_line_break_ending_a_paragraph_is_left_out():
+    assert convert_body("<p>Text<br><br></p><p><br>More</p>").html == "<p>Text</p>\n<p>More</p>"
+
+
+@pytest.mark.parametrize(
+    "text, meta, rest",
+    [
+        ('+++\ntitle = "Hugo"\ntags = ["a"]\n+++\nBody\n', {"title": "Hugo"}, "Body\n"),
+        ("+++\nnot toml at all\n+++\nBody\n", {}, "+++\nnot toml at all\n+++\nBody\n"),
+        ('{"title": "JSON", "n": 1}\nBody\n', {"title": "JSON"}, "Body\n"),
+        ('{"title": "JSON"} and text\n', {}, '{"title": "JSON"} and text\n'),  # not on a line of its own
+        ("{% raw %}\n", {}, "{% raw %}\n"),
+        ("---\ntitle: Pandoc\n...\nBody\n", {"title": "Pandoc"}, "Body\n"),
+    ],
+)
+def test_markdown_front_matter_in_toml_json_and_pandocs_yaml(text, meta, rest):
+    assert markdown.front_matter(text) == (meta, rest)
+
+
+def test_a_markdown_files_encoding_is_found():
+    assert markdown.decode("café\r\n".encode("utf-16")) == "café\n"
+    assert markdown.decode("café".encode("cp1252")) == "café"
+    assert markdown.decode("﻿café".encode()) == "café"
+    with pytest.raises(ValueError, match="not a text file"):
+        markdown.decode(b"\x89PNG\r\n\x1a\n\x00\x00")
+
+
+def test_a_link_or_style_split_into_runs_is_one_again():
+    doc = convert_body(
+        '<p><a href="https://example.org/a"> </a><a href="https://example.org/a">Research</a>'
+        '<span style="font-weight:700">bo</span><span style="font-weight:700">ld</span></p>'
+    )
+    assert doc.html == '<p><a href="https://example.org/a"> Research</a><strong>bold</strong></p>'
+
+
+def test_a_monospace_font_on_a_heading_a_link_or_punctuation_is_its_look_not_code():
+    mono = 'style="font-family:&quot;Courier New&quot;"'
+    doc = convert_body(
+        f'<p>Intro.</p><h2><span {mono}>Latest</span></h2><p><span {mono}><a href="https://example.org/">More</a></span>'
+        f"<span {mono}> · </span><span>set </span><span {mono}>FOLDER_URL</span></p>"
+    )
+    assert doc.html == (
+        '<p>Intro.</p>\n<h2 id="latest">Latest</h2>\n'
+        '<p><a href="https://example.org/">More</a> · set <code>FOLDER_URL</code></p>'
+    )
+
+
+def test_a_bookmark_with_no_id_it_can_keep_is_its_text():
+    """An <a> without an address whose id is the themes', not a usable one, or none: its text."""
+    for html in ['<p>x <a id="main">here</a></p>', '<p>x <a name="n">here</a></p>', '<p>x <a id="a b">here</a></p>']:
+        doc = convert.convert(html, image, attrs, "T")
+        assert doc.html == "<p>x here</p>", html
+
+
+def test_two_line_breaks_are_a_blank_line_still():
+    assert convert_body("<p>one<br><br>two</p>").html == "<p>one<br/><br/>two</p>"
+
+
+def test_an_id_the_document_gives_is_kept_and_a_heading_makes_way():
+    """A bookmark's or footnote's id is what links point at; a heading's is made up. Either order."""
+    for html in [
+        '<p><a href="#notes">go</a> <a id="notes"></a>mark</p><h2>Notes</h2>',
+        '<h2>Notes</h2><p><a href="#notes">go</a> <a id="notes"></a>mark</p>',
+    ]:
+        doc = convert.convert(html, image, attrs, "T")
+        assert '<h2 id="notes-2">Notes</h2>' in doc.html and '<a id="notes"></a>mark' in doc.html, html
+        assert '<a href="#notes">go</a>' in doc.html
+    footnotes = (
+        '<h2>Footnote 1</h2><p>x<sup><a href="#footnote-1">[1]</a></sup></p><ol><li id="footnote-1">A note.</li></ol>'
+    )
+    doc = convert.convert(footnotes, image, attrs, "T")
+    assert '<ol><li id="footnote-1">A note.</li></ol>' in doc.html and 'id="footnote-1-2"' in doc.html
+
+
+def test_a_link_to_a_place_left_off_the_page_leads_nowhere():
+    """A bookmark in the heading taken out as the title, or in a paragraph of an image alone."""
+    doc = convert_body(
+        '<h1><a id="top"></a>Title</h1><p><a id="bm"></a><img src="a.png"></p>'
+        '<p><a href="#top">t</a> <a href="#bm">b</a></p>'
+    )
+    assert '<a href="#">t</a> <a href="#">b</a>' in doc.html
+
+
+def test_a_digit_that_isnt_ascii_is_no_number():
+    html = convert_body('<table><tr><td colspan="²">a</td></tr></table><ol start="³"><li>x</li></ol>').html
+    assert "<td>a</td>" in html and "<ol><li>x</li></ol>" in html
+
+
+def test_a_utf8_file_with_a_bad_byte_keeps_its_other_letters():
+    assert markdown.decode("café — naïve".encode() + b"\xff") == "café — naïve�"
+
+
+def test_markdown_after_an_html_tag_is_still_markdown():
+    """As a README opens: only a comment is a block of HTML of its own."""
+    doc = convert_markdown('<p align="center">\n![logo](logo.png) **bold**\n</p>\n\n<!-- hidden -->\n\nText.\n')
+    assert "<strong>bold</strong>" in doc.html and len(doc.images) == 1 and "hidden" not in doc.html
+
+
+def test_a_word_file_that_wont_unpack_says_so(tmp_path):
+    import zipfile
+
+    data = bytearray(_word_file_with(tmp_path, "word/extra.xml", b"<x>" + b"text " * 200 + b"</x>"))
+    with zipfile.ZipFile(io.BytesIO(bytes(data))) as z:
+        info = z.getinfo("word/extra.xml")
+    start = info.header_offset + 30 + len(info.filename) + len(info.extra)
+    data[start : start + 8] = b"\xff" * 8  # its packed bytes broken
+    with pytest.raises(ValueError, match="can be read"):
+        word.word_html(bytes(data))
+
+
+def test_code_of_punctuation_stays_code():
+    mono = 'style="font-family:&quot;Courier New&quot;"'
+    doc = convert_body(
+        f"<p>Use <span {mono}>-&gt;</span> or <span {mono}>{{}}</span>.</p><p><span {mono}>}}</span></p>"
+    )
+    assert doc.html == "<p>Use <code>-&gt;</code> or <code>{}</code>.</p>\n<p><code>}</code></p>"
+
+
+def test_markdown_after_a_comment_on_its_line_is_markdown():
+    assert (
+        convert_markdown("Intro.\n\n<!--more--> **Read on**\n").html == "<p>Intro.</p>\n<p><strong>Read on</strong></p>"
+    )
+
+
+def test_windows_1252_with_curly_quotes_is_not_taken_for_utf8():
+    assert markdown.decode("café’s naïve été".encode("cp1252")) == "café’s naïve été"
+
+
+def test_front_matter_nested_past_pythons_depth_is_text():
+    for text in ['{"a":' + "[" * 100_000, "+++\na = " + "[" * 100_000 + "\n+++\nBody\n"]:
+        assert markdown.front_matter(text) == ({}, text)
+
+
+def test_only_a_page_number_ends_a_table_of_contents_entry():
+    text = word.clean('<p><a href="#_Toc1">Intro\t12</a> <a href="#_Toc2">Preface\tiv</a> <a href="#x">Go\tmid</a></p>')
+    assert [a.get_text() for a in text.body.find_all("a")] == ["Intro", "Preface", "Go\tmid"]
