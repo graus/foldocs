@@ -150,7 +150,9 @@ links. A folder in a section can have an `intro` too.
 
 **4. Add documents to a section.** Each document is a page: its **Title** line is the page's
 title, its **Subtitle** line the summary on its card, and the rest the page itself, with headings,
-lists, links and tables.
+lists, links and tables. A link to another document, photo or folder in your folder (a Doc's
+address, or a path such as `../Trip/Day one.md` in a Markdown or Word file) leads to its page on
+the site.
 
 **5. Add images.** Two ways, for two things:
 

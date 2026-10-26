@@ -484,7 +484,7 @@ def test_a_monospace_font_on_a_heading_a_link_or_punctuation_is_its_look_not_cod
 def test_a_bookmark_with_no_id_it_can_keep_is_its_text():
     """An <a> without an address whose id is the themes', not a usable one, or none: its text."""
     for html in ['<p>x <a id="main">here</a></p>', '<p>x <a name="n">here</a></p>', '<p>x <a id="a b">here</a></p>']:
-        doc = convert.convert(html, image, attrs, "T")
+        doc = convert.convert(html, image, attrs, "T", link=lambda href: None)
         assert doc.html == "<p>x here</p>", html
 
 
@@ -520,6 +520,11 @@ def test_a_link_to_a_place_left_off_the_page_leads_nowhere():
 def test_a_digit_that_isnt_ascii_is_no_number():
     html = convert_body('<table><tr><td colspan="²">a</td></tr></table><ol start="³"><li>x</li></ol>').html
     assert "<td>a</td>" in html and "<ol><li>x</li></ol>" in html
+
+
+def test_a_folder_link_is_only_as_the_sync_writes_it():
+    doc = convert.convert('<p><a href="Folder:/x.md">a</a> <a href="folder:/x.md">b</a></p>', image, attrs, "T")
+    assert doc.html == '<p>a <a href="folder:/x.md">b</a></p>'
 
 
 def test_a_utf8_file_with_a_bad_byte_keeps_its_other_letters():

@@ -581,6 +581,7 @@ IMAGES = {
     "markdown/obsidian/kanaal.png": (40, 30, (40, 120, 200)),
     "markdown/raw-html/logo.png": (16, 16, (90, 90, 90)),
     "markdown/commonmark-corners/picture.png": (16, 16, (150, 40, 90)),
+    "markdown/links-between-documents/Trip/beach.png": (40, 30, (230, 200, 120)),
 }
 
 

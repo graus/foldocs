@@ -108,6 +108,9 @@ class Site:
     items: list[Item]  # everything in the sections, newest first
     design: dict = field(default_factory=dict)  # the design Doc's settings (see design.py)
     font_faces: str = ""  # the @font-face rules for the fonts it names
+    # Where a link from a document to another file or folder leads, by its ID and by its path (as a
+    # tuple of names; a folder's ends in ""): the page's address
+    destinations: dict[str | tuple[str, ...], str] = field(default_factory=dict)
 
 
 class Addresses:
@@ -149,7 +152,7 @@ def collect(settings: Settings, theme: Theme, source: Source | None = None) -> S
     folder_urls = {tuple(f["path"]): source.folder_url(Folder(f["path"], f.get("id", ""))) for f in cache.folders()}
     # The theme's addresses are taken, so a folder or page with the same name gets another one.
     addresses = Addresses([*RESERVED, *(extra.url for extra in theme.extras.values())])
-    root, intros = _Root(), {}
+    root, intros, shown = _Root(), {}, []
     tree = _Tree(addresses, folder_urls)
 
     # Oldest first, so an existing item keeps its address when a newer one gets the same title;
@@ -158,6 +161,7 @@ def collect(settings: Settings, theme: Theme, source: Source | None = None) -> S
         entry = Entry(**raw)
         if not (content := cache.content(entry.id)):
             continue
+        shown.append(entry)
         if not entry.path:
             _add_to_root(root, entry, content, source, tz)
         elif role(entry) == "intro":
@@ -188,7 +192,24 @@ def collect(settings: Settings, theme: Theme, source: Source | None = None) -> S
         items=sorted(tree.items, key=lambda i: i.date, reverse=True),
         design=(root.design or {}).get("design", {}),
         font_faces=(root.design or {}).get("fonts", ""),
+        destinations=_destinations(shown, [*root.pages, *tree.items], tree, cache.folders()),
     )
+
+
+def _destinations(entries: list[Entry], items: list[Item], tree: "_Tree", folders: list[dict]) -> dict:
+    """Where a link to each file and folder leads, by its ID and by its path (a folder's ending in
+    "", as a link to a folder ends in /, so a file can't take a folder's place): a document or
+    photo to its page, a folder or its intro to the folder's page (the root folder's: home)."""
+    pages = {item.id: item.url for item in items}
+    found: dict[str | tuple[str, ...], str] = {(*path, ""): cat.url for path, cat in tree.categories.items()}
+    for folder in folders:
+        if folder.get("id") and (cat := tree.categories.get(tuple(folder["path"]))):
+            found[folder["id"]] = cat.url
+    for entry in entries:
+        url = pages.get(entry.id) or (found.get((*entry.path, "")) if role(entry) == "intro" else None)
+        if url:
+            found[entry.id] = found[entry.where] = url
+    return found
 
 
 # The root folder ---------------------------------------------------------------------------------

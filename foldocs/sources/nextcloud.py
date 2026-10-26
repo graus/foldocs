@@ -11,6 +11,7 @@ used where Nextcloud knows it, else its upload time, else its last change.
 
 import hashlib
 import logging
+import re
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote, unquote, urlencode, urlparse
@@ -181,6 +182,14 @@ class Nextcloud:
 
     def folder_url(self, folder: Folder) -> str:
         return self._folder_page(folder.path)
+
+    def file_id(self, url: str) -> str | None:
+        """The ID in a link to a file or folder on the same server, as Nextcloud gives one to share
+        inside it (https://cloud.example.com/f/123): the ID the share lists it by."""
+        if not url.startswith(self.base + "/"):
+            return None
+        m = re.fullmatch(r"/(?:index\.php/)?f/(\d+)/?", urlparse(url).path[len(urlparse(self.base).path) :])
+        return m[1] if m else None
 
 
 def _is_share(folder_url: str) -> bool:
