@@ -18,6 +18,8 @@ it. Documents become pages, folders become sections and photos become photo page
 service checks the folder every minute and rebuilds what changed; any web server can host the
 result.
 
+> Rather try before you host? You can now try a free (limited) preview at [try.foldocs.com](https://try.foldocs.com)!
+
 Foldocs has no editor or database of its own. The folder is where you write, and the site is a
 read-only copy of it. Reading the folder takes only its share link (and, for Drive, an API key),
 because the folder is public, as the site is. Sites come with a feed, dark mode, accessible markup
