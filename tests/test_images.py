@@ -33,6 +33,28 @@ def test_a_transparent_graphic_is_judged_on_white(tmp_path):
     assert info["graphic"] and info["color"] == "#ffffff"
 
 
+def test_a_transparent_image_has_nothing_painted_behind_it(tmp_path):
+    im = Image.new("RGBA", (400, 300), (0, 0, 0, 0))
+    ImageDraw.Draw(im).ellipse((100, 50, 300, 250), fill=(232, 70, 30, 255))
+    data = tmp_path / "logo.png"
+    im.save(data)
+    info = images.process(data.read_bytes(), tmp_path / "out", "logo")
+    assert info["transparent"]
+    assert "style" not in images.attrs({**info, "base": "/media/"})
+    with Image.open(tmp_path / "out" / "logo-400.webp") as out:
+        assert out.mode == "RGBA" and out.getpixel((0, 0))[3] == 0
+
+
+def test_an_opaque_image_with_alpha_keeps_its_ground(tmp_path):
+    im = Image.new("RGBA", (400, 300), (248, 243, 234, 255))  # a chart on a page color, alpha all 255
+    ImageDraw.Draw(im).rectangle((50, 100, 350, 150), fill=(168, 71, 31, 255))
+    data = tmp_path / "chart.png"
+    im.save(data)
+    info = images.process(data.read_bytes(), tmp_path / "out", "chart")
+    assert not info["transparent"]
+    assert images.attrs({**info, "base": "/media/"})["style"] == f"background-color:{info['color']}"
+
+
 def test_an_image_too_large_to_hold_in_memory_is_refused(tmp_path, monkeypatch):
     monkeypatch.setattr(images, "PIXELS_MAX", 100)
     buf = io.BytesIO()

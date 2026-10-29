@@ -33,6 +33,10 @@ def process(data: bytes, out_dir: Path, stem: str) -> dict:
     im = animation[0][0] if animation else _still(im)
     has_alpha = im.mode in ("RGBA", "LA") or (im.mode == "P" and "transparency" in im.info)
     im = im.convert("RGBA" if has_alpha else "RGB")
+    # Only an image with pixels that let the page through, in any frame; many PNGs have alpha and
+    # none of those.
+    frames = animation[0] if animation else [im]
+    transparent = has_alpha and any(f.getchannel("A").getextrema()[0] < 255 for f in frames)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     variants = []
@@ -61,6 +65,8 @@ def process(data: bytes, out_dir: Path, stem: str) -> dict:
         # Shown while the image loads; for a graphic, also around it when it is fitted, not cropped.
         "color": f"#{r:02x}{g:02x}{b:02x}",
         "graphic": graphic,
+        # The page shows through it, so nothing is painted behind it.
+        "transparent": transparent,
         "taken": taken,
     }
 
@@ -141,6 +147,6 @@ def attrs(info: dict, sizes: str = SIZES) -> dict:
         "sizes": sizes,
         "width": info["width"],
         "height": info["height"],
-        "style": f"background-color:{info['color']}",
+        **({} if info.get("transparent") else {"style": f"background-color:{info['color']}"}),
         **({"data-graphic": ""} if info.get("graphic") else {}),
     }

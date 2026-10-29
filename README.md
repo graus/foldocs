@@ -190,7 +190,8 @@ My site/                       shared: anyone with the link can view
   `subtitle:` or `description:`), and an image is another file in the folder, linked by its path:
   `![The beach](photos/beach.jpg)`.
 - **Photos** are dated by when they were taken and captioned by their description where the
-  service has one. Drawings and diagrams are fitted rather than cropped.
+  service has one. Drawings and diagrams are fitted rather than cropped, and an image with a
+  transparent background (a PNG, GIF or WebP) stays transparent: the page shows through it.
 - **Hidden files and folders**, whose names start with a dot, are not on the site; a Markdown
   file can still show the images in one.
 - **Everything else in the folder is on the site**, about five minutes after you last touched a
