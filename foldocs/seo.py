@@ -82,9 +82,19 @@ class Pages:
         return self.card or self.image(self.site.portrait, portrait)
 
     def image(self, info: dict | None, alt: str = "") -> dict | None:
-        """The image a link preview shows: its largest variant up to OG_IMAGE_WIDTH."""
+        """The image a link preview shows: its JPEG preview when there is one, else its largest
+        variant up to OG_IMAGE_WIDTH. The preview is written next to the WebP variants in a format
+        every crawler decodes (some link previews don't read WebP)."""
         if not info:
             return None
+        preview = info.get("preview")
+        if preview:
+            return {
+                "url": self.base + info["base"] + preview["file"],
+                "width": preview["w"],
+                "height": preview["h"],
+                "alt": alt,
+            }
         fitting = [v for v in info["variants"] if v["w"] <= OG_IMAGE_WIDTH] or info["variants"][:1]
         variant = fitting[-1]
         return {
