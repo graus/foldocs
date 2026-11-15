@@ -24,6 +24,20 @@ def test_a_photo_is_not():
     assert images._graphic(im) == (False, None)
 
 
+def test_a_preview_jpeg_sits_next_to_the_webp_variants(tmp_path):
+    """A link preview's image is a JPEG, as wide as a card needs, next to the WebP variants."""
+    info = images.process(encoded(Image.new("RGB", (2000, 1000), "orange"), "JPEG"), tmp_path, "x")
+    assert info["preview"] == {"file": "x-preview.jpg", "w": 1200, "h": 600}
+    with Image.open(tmp_path / "x-preview.jpg") as jpeg:
+        assert jpeg.format == "JPEG"
+        assert jpeg.size == (1200, 600)
+
+
+def test_a_preview_jpeg_never_upscales_a_small_image(tmp_path):
+    info = images.process(encoded(Image.new("RGB", (400, 200), "blue"), "PNG"), tmp_path, "x")
+    assert info["preview"] == {"file": "x-preview.jpg", "w": 400, "h": 200}
+
+
 def test_a_transparent_graphic_is_judged_on_white(tmp_path):
     im = Image.new("RGBA", (400, 300), (0, 0, 0, 0))
     ImageDraw.Draw(im).ellipse((100, 50, 300, 250), fill=(232, 70, 30, 255))

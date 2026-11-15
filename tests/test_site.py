@@ -551,6 +551,20 @@ def test_a_photo_in_the_feed_is_escaped_once(tmp_path):
     assert "&amp;lt;" not in feed
 
 
+def test_a_photo_s_page_previews_its_jpeg_image(tmp_path):
+    """A page with a photo previews its card-sized JPEG: some link previews don't read WebP."""
+    photo = entry("p", "Studio.jpg", ["notes"], "image") | {"description": "Ink & paper"}
+    content = {"image": {**IMAGE, "preview": {"file": "me-preview.jpg", "w": 480, "h": 600}}}
+    settings = make_site(tmp_path, [(photo, content)])
+    render.build(replace(settings, theme_dir=THEME.dir))
+    html = (settings.public_dir / "notes" / "studio" / "index.html").read_text()
+    assert 'property="og:image" content="https://example.org/media/m/me-preview.jpg"' in html
+    assert 'property="og:image:width" content="480"' in html
+    assert 'property="og:image:height" content="600"' in html
+    assert '<img src="/media/m/me-480.webp"' in html  # the page itself keeps the WebP variants
+    assert 'srcset="/media/m/me-480.webp 480w"' in html
+
+
 def test_links_to_other_files_in_the_folder_lead_to_their_pages():
     """By the ID (the file may have been renamed since), else by the path (added since); a folder's
     path ends in "", so a file of the same name can't take its place."""
