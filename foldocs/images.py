@@ -15,6 +15,8 @@ register_heif_opener()  # iPhone photos
 WIDTHS = (480, 720, 1080, 1600, 2400)
 SIZES = "(min-width: 48rem) 42.5rem, calc(100vw - 2rem)"  # as wide as the text, unless a template says
 QUALITY = 75
+PREVIEW_WIDTH = 1200  # a link preview's image: as wide as a card needs, in a format every crawler reads
+PREVIEW_QUALITY = 85  # the preview is JPEG, so a little higher quality than the WebP variants
 EXIF_IFD, EXIF_DATETIME_ORIGINAL, EXIF_DATETIME = 0x8769, 0x9003, 0x0132  # when taken; else last changed
 EXIF_ORIENTATION = 0x0112  # 5 to 8: turned a quarter, so its width on screen is its height in the file
 SRC_WIDTH = 960  # the variant in `src`, for a browser that ignores srcset
@@ -54,10 +56,21 @@ def process(data: bytes, out_dir: Path, stem: str) -> dict:
     seen = Image.alpha_composite(Image.new("RGBA", im.size, "white"), im).convert("RGB") if has_alpha else im
     graphic, ground = _graphic(seen)
     r, g, b = ground or seen.resize((1, 1), Image.Resampling.BOX).getpixel((0, 0))
+
+    # A link preview's image: a JPEG next to the WebP variants, as wide as a card needs. Some link
+    # previews (WhatsApp, iMessage, LinkedIn and others) don't always read WebP, so og:image points
+    # here: the same picture, in a format every crawler decodes. Keep the WebP variants for the page.
+    preview_width = min(PREVIEW_WIDTH, im.width)
+    size = (preview_width, round(im.height * preview_width / im.width))
+    preview = seen if size == seen.size else seen.resize(size, Image.Resampling.LANCZOS)
+    preview_name = f"{stem}-preview.jpg"
+    preview.save(out_dir / preview_name, "JPEG", quality=PREVIEW_QUALITY, optimize=True)
+
     return {
         "width": im.width,
         "height": im.height,
         "variants": variants,
+        "preview": {"file": preview_name, "w": size[0], "h": size[1]},
         # Shown while the image loads; for a graphic, also around it when it is fitted, not cropped.
         "color": f"#{r:02x}{g:02x}{b:02x}",
         "graphic": graphic,
